@@ -1,0 +1,35 @@
+So hello judges, this is team DDoxers and this is our project. What we have built over here is SmartRoute, an autonomous logistics optimization engine. 
+
+There are not many people who know how to program complicated algorithms to optimize routing for their fleets and balancing weight load. 
+
+Everybody could make a list of orders, but nobody knows how to get through them and what is the most optimal way to deliver it without spending unnecessary money on fuels and CO2 emissions.
+
+This is what we do. We save you from any kind of overhead and give you the optimized routes on a map after putting your order data or describing your dispatching instructions in English.
+
+Now let us go through some of our cool features before starting optimizing our routes.
+
+Let’s start with the beautiful landing page that we made. It's a black-and-white minimalist approach to our utility for a high-impact hackathon. Now let’s log into our console.
+
+Here it is. This is our control deck where we have the role switcher which allows judges to instantly switch between three different roles: Fleet Dispatcher, Logistics Manager, and System Admin.
+
+For instance, as a Fleet Dispatcher, you can choose any car in the sidebar of the fleet list, and the active trajectory will be shown immediately. 
+
+It's also possible to locally input the weather and traffic noise variables for calculating ML-based delay changes without relying on APIs. 
+
+Once you prepare the trip, you can send the stop manifest to the driver's device through WhatsApp with just one click. 
+
+Alternatively, you can use our AI chat console to give commands in natural language. Let's say you want to add an order by Client F using coordinates. 
+
+In Logistics Manager mode, you receive precise metrics related to fuel efficiency and CO2 reduction against the background of unoptimized deliveries. 
+
+Pricing factors and capacity statistics can be tuned manually with sliders by managers.
+ 
+Finally, we've developed an agent-based disruption simulation. 
+
+Setting up the malfunction event automatically triggers the autonomous multi-agent optimization process that re-routes all orders instantly. 
+
+Lastly, we have prepared a special System Admin interface displaying registered users' names along with diagnostic database reset tools. 
+
+There's also a Driver Console available. Drivers can pick a vehicle, check the path, simulate the GPS route, and mark all stops as completed.
+
+So this was our project for FAR AWAY 2026, and I hope that the judges liked it. Thank you.

@@ -1,0 +1,2718 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OrbitGrasp — Team Dashboard</title>
+<meta name="description" content="OrbitGrasp Team Dashboard — aggregate architecture health, health scores, and commit activity across multiple repositories.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 34 34'%3E%3Crect width='34' height='34' rx='9' fill='%230a1e1e'/%3E%3Ccircle cx='14' cy='7' r='2.4' fill='%23fc6d26'/%3E%3Ccircle cx='6' cy='19' r='2' fill='%234d9fff' opacity='.9'/%3E%3Ccircle cx='22' cy='19' r='2' fill='%23a78bfa' opacity='.9'/%3E%3Ccircle cx='14' cy='14' r='3' fill='%23fc6d26'/%3E%3Cline x1='14' y1='11' x2='14' y2='9.4' stroke='%23fc6d26' stroke-width='1.4' stroke-linecap='round'/%3E%3Cline x1='11.4' y1='16' x2='8.2' y2='17.6' stroke='%234d9fff' stroke-width='1.4' stroke-linecap='round'/%3E%3Cline x1='16.6' y1='16' x2='19.8' y2='17.6' stroke='%23a78bfa' stroke-width='1.4' stroke-linecap='round'/%3E%3Cpath d='M7.4 20.6 Q14 25 20.6 20.6' stroke='%23fc6d26' stroke-width='.9' fill='none' stroke-opacity='.4' stroke-linecap='round'/%3E%3Crect x='22' y='20' width='3' height='8' rx='1' fill='%23fc6d26' opacity='.9'/%3E%3Crect x='26' y='23' width='3' height='5' rx='1' fill='%234d9fff' opacity='.85'/%3E%3Crect x='30' y='25' width='3' height='3' rx='1' fill='%23a78bfa' opacity='.8'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg0:#000000;--bg1:#0a0a0a;--bg2:#141414;--bg3:#1e1e1e;--bg4:#282828;
+  --hover:#1e1e1e;
+  --t0:#ffffff;--t1:#cccccc;--t2:#888888;--t3:#444444;
+  --acc:#ffffff;--acc2:#cccccc;--accbg:rgba(255,255,255,0.07);
+  --green:#aaaaaa;--orange:#dddddd;--red:#ff4444;--blue:#aaaaaa;--purple:#888888;--cyan:#cccccc;--pink:#bbbbbb;
+  --border:rgba(255,255,255,0.14);
+  --border2:rgba(255,255,255,0.07);
+  --card-bg:rgba(255,255,255,0.03);
+  --shadow:rgba(0,0,0,0.8);
+  --font:'JetBrains Mono',monospace;
+}
+
+/* ── Keyframes ── */
+@keyframes topbar-glow{0%,100%{width:200px;opacity:.7}50%{width:360px;opacity:1}}
+@keyframes logo-float{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-2px) scale(1.03)}}
+@keyframes pulse-glow{0%,100%{box-shadow:0 0 8px rgba(255,255,255,.35),0 2px 10px rgba(255,255,255,.3)}50%{box-shadow:0 0 22px rgba(255,255,255,.65),0 2px 18px rgba(255,255,255,.5)}}
+@keyframes slide-in-up{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes row-in{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:translateX(0)}}
+@keyframes shimmer{0%{background-position:200% center}100%{background-position:-200% center}}
+@keyframes sweep{0%{transform:translateY(100vh);opacity:.06}100%{transform:translateY(-100%);opacity:0}}
+@keyframes acc-border{0%,100%{border-color:rgba(255,255,255,.3)}50%{border-color:rgba(255,255,255,.7)}}
+@keyframes card-in{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes dot-pulse{0%,100%{box-shadow:0 0 0 0 rgba(255,255,255,.7)}70%{box-shadow:0 0 0 7px rgba(255,255,255,0)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── Body / background ── */
+body{
+  font-family:var(--font);background:var(--bg0);color:var(--t1);
+  min-height:100vh;padding-bottom:26px;
+  background-image:
+    linear-gradient(rgba(255,255,255,.038) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.038) 1px,transparent 1px),
+    radial-gradient(circle,rgba(255,255,255,.022) 1px,transparent 1px);
+  background-size:32px 32px,32px 32px,64px 64px;
+}
+/* Sweep overlay */
+body::after{
+  content:'';position:fixed;top:0;left:0;right:0;height:60%;
+  background:linear-gradient(180deg,rgba(255,255,255,.018) 0%,transparent 100%);
+  pointer-events:none;z-index:0;
+  animation:sweep 14s linear infinite;will-change:transform;
+}
+a{color:var(--acc);text-decoration:none;}
+
+/* ── Topbar ── */
+.topbar{
+  height:54px;
+  background:linear-gradient(180deg,var(--bg2) 0%,var(--bg1) 100%);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;padding:0 20px;gap:10px;
+  position:sticky;top:0;z-index:500;
+  overflow:visible;
+}
+.topbar::after{
+  content:'';position:absolute;bottom:0;left:0;height:1px;
+  background:linear-gradient(90deg,var(--acc),rgba(129,140,248,.5),transparent);
+  pointer-events:none;
+  animation:topbar-glow 4s ease-in-out infinite;
+}
+
+/* ── Logo ── */
+.topbar-logo-wrap{display:flex;align-items:center;gap:10px;}
+.logo-mark{
+  display:block;flex-shrink:0;
+  animation:logo-float 5s ease-in-out infinite;
+  filter:drop-shadow(0 0 7px rgba(255,255,255,.55));
+}
+.logo-text{
+  font-size:16px;font-weight:800;letter-spacing:-.5px;
+  background:linear-gradient(110deg,#fff 0%,var(--acc) 60%,#0099cc 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.topbar-sub{font-size:10px;color:var(--t3);letter-spacing:.4px;}
+
+/* ── Topbar right ── */
+.topbar-right{margin-left:auto;display:flex;gap:6px;align-items:center;}
+
+/* ── Buttons ── */
+.btn{
+  font-family:var(--font);font-size:11px;padding:6px 14px;
+  border:none;border-radius:5px;cursor:pointer;white-space:nowrap;font-weight:700;
+  background:linear-gradient(135deg,var(--acc) 0%,var(--acc2) 100%);
+  color:#fff;
+  transition:all .18s;
+  animation:pulse-glow 2.8s ease-in-out infinite;
+  box-shadow:0 2px 12px rgba(255,255,255,.3);
+  position:relative;z-index:1;
+  display:inline-flex;align-items:center;gap:6px;line-height:1;
+}
+.btn>svg{flex-shrink:0;}
+.btn:hover{opacity:.9;transform:translateY(-1px);box-shadow:0 4px 22px rgba(255,255,255,.5);animation:none;}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none;animation:none;}
+.btn.secondary{
+  background:transparent;border:1px solid var(--border);
+  color:var(--t2);font-weight:500;
+  animation:none;box-shadow:none;
+}
+.btn.secondary:hover{border-color:rgba(255,255,255,.4);color:var(--t1);background:rgba(255,255,255,.06);transform:none;}
+
+/* ── Workspace switcher ── */
+.ws-wrap{position:relative;}
+.ws-btn{
+  background:var(--bg2);border:1px solid var(--border);color:var(--t1);
+  font-size:11px;font-family:var(--font);padding:5px 10px;border-radius:5px;
+  cursor:pointer;white-space:nowrap;max-width:160px;overflow:hidden;text-overflow:ellipsis;
+  transition:border-color .15s,box-shadow .15s;
+}
+.ws-btn:hover{border-color:rgba(255,255,255,.4);box-shadow:0 0 0 2px rgba(255,255,255,.1);}
+.ws-dropdown{
+  position:absolute;top:calc(100% + 5px);right:0;min-width:210px;
+  background:var(--bg2);border:1px solid rgba(255,255,255,.2);
+  border-radius:9px;box-shadow:0 12px 40px rgba(0,0,0,.7),0 0 0 1px rgba(255,255,255,.06);
+  z-index:9000;padding:6px;
+  animation:slide-in-up .18s ease;
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+}
+.ws-item{display:flex;align-items:center;gap:6px;padding:7px 9px;border-radius:5px;cursor:pointer;font-size:11px;color:var(--t1);transition:background .1s;}
+.ws-item:hover{background:rgba(255,255,255,.1);}
+.ws-item.active{color:var(--acc);font-weight:700;}
+.ws-item-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.ws-item-del{color:var(--t3);font-size:11px;padding:1px 4px;border:none;background:none;cursor:pointer;border-radius:3px;transition:all .12s;}
+.ws-item-del:hover{color:var(--red);background:rgba(255,95,95,.1);}
+.ws-new-row{display:flex;gap:6px;padding:4px 0 2px;}
+.ws-new-input{flex:1;background:var(--bg3);border:1px solid var(--border);color:var(--t1);font-size:11px;font-family:var(--font);padding:5px 8px;border-radius:5px;outline:none;transition:border-color .15s;}
+.ws-new-input:focus{border-color:var(--acc);}
+.ws-new-btn{background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff;border:none;border-radius:5px;padding:5px 10px;font-size:11px;cursor:pointer;font-weight:700;}
+
+/* ── Container ── */
+.container{max-width:1300px;margin:0 auto;padding:24px 20px;position:relative;z-index:1;}
+
+/* ── Section title ── */
+.section-title{
+  font-size:11px;font-weight:700;color:var(--t2);margin-bottom:14px;
+  text-transform:uppercase;letter-spacing:.1em;
+  display:flex;align-items:center;gap:8px;
+}
+.section-title::before{
+  content:'';width:3px;height:14px;flex-shrink:0;border-radius:2px;
+  background:linear-gradient(to bottom,var(--acc),var(--acc2));
+  box-shadow:0 0 8px rgba(255,255,255,.5);
+}
+
+/* ── Add bar / inputs ── */
+.add-bar{display:flex;gap:8px;margin-bottom:22px;flex-wrap:wrap;}
+.repo-input{
+  background:var(--bg1);border:1px solid var(--border);color:var(--t1);
+  font-family:var(--font);font-size:12px;padding:8px 14px;border-radius:6px;outline:none;
+  flex:1;min-width:200px;transition:border-color .18s,box-shadow .18s;
+}
+.repo-input:focus{border-color:var(--acc);box-shadow:0 0 0 2px rgba(255,255,255,.15);animation:acc-border 2.5s ease-in-out infinite;}
+
+/* ── Auth bar ── */
+.auth-bar{
+  display:flex;align-items:center;gap:8px;margin-bottom:18px;
+  padding:7px 12px;border-radius:6px;flex-wrap:wrap;
+  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);
+  font-size:10px;color:var(--t3);
+}
+.auth-mode-select{
+  background:var(--bg2);border:1px solid var(--border);color:var(--t1);
+  font-family:var(--font);font-size:10px;padding:3px 6px;border-radius:4px;
+  cursor:pointer;outline:none;
+}
+.auth-mode-select:focus{border-color:rgba(255,255,255,.4);}
+.token-input{
+  background:var(--bg2);border:1px solid var(--border);color:var(--t2);
+  font-family:var(--font);font-size:10px;padding:3px 8px;border-radius:4px;
+  flex:1;min-width:160px;max-width:260px;outline:none;transition:border-color .15s;
+}
+.token-input:focus{border-color:rgba(255,255,255,.4);color:var(--t1);}
+.auth-app-id{
+  background:var(--bg2);border:1px solid var(--border);color:var(--t2);
+  font-family:var(--font);font-size:10px;padding:3px 8px;border-radius:4px;
+  width:80px;outline:none;transition:border-color .15s;
+}
+.auth-app-id:focus{border-color:rgba(255,255,255,.4);color:var(--t1);}
+.auth-key-btn{
+  background:none;border:1px solid rgba(255,255,255,.3);color:var(--acc2);
+  font-family:var(--font);font-size:9px;padding:3px 8px;border-radius:4px;
+  cursor:pointer;white-space:nowrap;transition:all .15s;
+  display:inline-flex;align-items:center;gap:5px;line-height:1;
+}
+.auth-key-btn>svg{flex-shrink:0;}
+.auth-key-btn:hover{background:rgba(255,255,255,.12);color:#fff;}
+.auth-key-btn.set{border-color:#22c55e;color:#22c55e;}
+.auth-hint{font-size:9px;color:var(--t3);opacity:.7;white-space:nowrap;}
+/* Private key modal */
+.key-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;display:flex;align-items:center;justify-content:center;}
+.key-modal{background:var(--bg1);border:1px solid var(--border);border-radius:10px;padding:24px;width:480px;max-width:90vw;}
+.key-modal-title{font-size:13px;font-weight:700;color:var(--t1);margin-bottom:4px;}
+.key-modal-sub{font-size:10px;color:var(--t3);margin-bottom:14px;line-height:1.5;}
+.key-modal textarea{width:100%;height:140px;background:var(--bg2);border:1px solid var(--border);color:var(--t2);font-family:monospace;font-size:9px;padding:8px;border-radius:6px;resize:vertical;outline:none;box-sizing:border-box;}
+.key-modal textarea:focus{border-color:rgba(255,255,255,.4);}
+.key-modal-btns{display:flex;gap:8px;margin-top:12px;justify-content:flex-end;}
+
+/* ── Summary strip ── */
+.summary-strip{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  gap:12px;margin-bottom:26px;
+}
+.summary-card{
+  background:var(--card-bg);border:1px solid var(--border);border-radius:10px;
+  padding:16px 18px;position:relative;overflow:hidden;
+  transition:border-color .2s,box-shadow .2s,transform .2s;
+  animation:card-in .4s ease both;
+}
+.summary-card::before{
+  content:'';position:absolute;top:0;left:0;width:3px;height:100%;
+  background:linear-gradient(to bottom,var(--acc),var(--acc2));
+  opacity:.7;border-radius:2px 0 0 2px;
+}
+.summary-card:hover{
+  border-color:rgba(255,255,255,.3);
+  box-shadow:0 4px 24px rgba(255,255,255,.12);
+  transform:translateY(-2px);
+}
+.summary-card .value{font-size:22px;font-weight:800;line-height:1;letter-spacing:-.5px;}
+.summary-card .label{font-size:9px;color:var(--t3);margin-top:5px;text-transform:uppercase;letter-spacing:.06em;}
+
+/* ── Repo table ── */
+.repo-table{width:100%;border-collapse:collapse;margin-bottom:28px;}
+.repo-table th{
+  font-size:9px;color:var(--t3);text-align:right;
+  padding:7px 12px;border-bottom:1px solid var(--border);
+  text-transform:uppercase;letter-spacing:.06em;font-weight:600;
+}
+.repo-table th:first-child{text-align:left;}
+.repo-table td{font-size:11px;padding:9px 12px;border-bottom:1px solid var(--border);text-align:right;transition:background .1s;}
+.repo-table td:first-child{text-align:left;}
+.repo-table tbody tr{animation:row-in .25s ease both;}
+.repo-table tbody tr:nth-child(1){animation-delay:.02s}
+.repo-table tbody tr:nth-child(2){animation-delay:.05s}
+.repo-table tbody tr:nth-child(3){animation-delay:.08s}
+.repo-table tbody tr:nth-child(4){animation-delay:.11s}
+.repo-table tbody tr:nth-child(5){animation-delay:.14s}
+.repo-table tr:hover td{background:rgba(255,255,255,.05);}
+
+/* ── Grade badges ── */
+.grade{display:inline-block;width:22px;height:22px;border-radius:4px;font-size:11px;font-weight:700;text-align:center;line-height:22px;}
+.grade-A{background:rgba(34,197,94,.18);color:#22c55e;box-shadow:0 0 8px rgba(34,197,94,.2);}
+.grade-B{background:rgba(129,140,248,.18);color:#818cf8;box-shadow:0 0 8px rgba(129,140,248,.15);}
+.grade-C{background:rgba(245,158,11,.18);color:#f59e0b;}
+.grade-D,.grade-F{background:rgba(255,95,95,.18);color:#ff5f5f;}
+
+/* ── Table controls ── */
+.remove-btn{background:none;border:none;color:var(--t3);cursor:pointer;font-size:13px;padding:0 4px;transition:color .12s,transform .12s;}
+.remove-btn:hover{color:var(--red);transform:scale(1.2);}
+.grasp-badge{display:inline-block;font-size:8px;font-weight:700;letter-spacing:.04em;padding:1px 5px;border-radius:3px;background:rgba(255,255,255,.18);color:var(--acc2);border:1px solid rgba(255,255,255,.3);cursor:default;flex-shrink:0;}
+.grasp-open-btn{background:none;border:1px solid rgba(255,255,255,.3);color:var(--acc2);cursor:pointer;font-size:9px;padding:2px 6px;border-radius:4px;transition:all .15s;white-space:nowrap;}
+.grasp-open-btn:hover{background:rgba(255,255,255,.18);border-color:var(--acc);color:#fff;}
+/* ── Repo cell layout ── */
+.repo-name-line{display:flex;align-items:center;gap:5px;margin-bottom:3px;}
+.repo-name-link{font-size:12px;font-weight:600;color:var(--t1);text-decoration:none;transition:color .12s;white-space:nowrap;}
+.repo-name-link:hover{color:var(--acc2);}
+.gh-arrow{color:var(--t3);font-size:10px;text-decoration:none;flex-shrink:0;transition:color .12s;line-height:1;}
+.gh-arrow:hover{color:var(--acc2);}
+.repo-meta-line{display:flex;align-items:center;gap:5px;margin-bottom:2px;flex-wrap:wrap;}
+.repo-lang{font-size:9px;color:var(--t3);}
+.repo-stars{font-size:9px;color:var(--t3);}
+.repo-activity-line{display:flex;align-items:center;gap:6px;margin-top:3px;flex-wrap:wrap;}
+.commit-pill{font-size:9px;color:var(--t3);white-space:nowrap;}
+.commit-pill span{color:var(--t2);font-weight:600;}
+.stale-btn{display:inline-flex;align-items:center;gap:3px;font-size:9px;font-weight:600;padding:1px 6px;border-radius:3px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.3);color:#f59e0b;cursor:pointer;text-decoration:none;white-space:nowrap;transition:all .15s;}
+.stale-btn:hover{background:rgba(245,158,11,.22);border-color:#f59e0b;color:#fbbf24;}
+.ci-badge{display:inline-flex;align-items:center;gap:3px;font-size:9px;padding:1px 5px;border-radius:3px;font-weight:600;}
+.ci-badge.pass{background:rgba(34,197,94,0.1);color:#22c55e;border:1px solid rgba(34,197,94,0.2);}
+.ci-badge.fail{background:rgba(248,113,113,0.1);color:#f87171;border:1px solid rgba(248,113,113,0.2);}
+.ci-badge.pending{background:rgba(245,158,11,0.1);color:#f59e0b;border:1px solid rgba(245,158,11,0.2);}
+.activity-loading{font-size:9px;color:var(--t3);opacity:.5;}
+.team-input{
+  background:none;border:none;border-bottom:1px solid transparent;
+  color:var(--t2);font-size:10px;font-family:var(--font);width:72px;
+  padding:2px 3px;outline:none;transition:all .15s;border-radius:0;
+}
+.team-input:hover{border-bottom-color:rgba(255,255,255,.3);}
+.team-input:focus{border-bottom-color:var(--acc);background:rgba(255,255,255,.06);color:var(--t1);}
+.notes-input{
+  background:none;border:none;border-bottom:1px solid transparent;
+  color:var(--t2);font-size:10px;font-family:var(--font);width:110px;
+  padding:2px 3px;outline:none;transition:all .15s;border-radius:0;
+}
+.notes-input:hover{border-bottom-color:rgba(255,255,255,.3);}
+.notes-input:focus{border-bottom-color:var(--acc);background:rgba(255,255,255,.06);color:var(--t1);}
+
+/* ── Status tags ── */
+.status-tag{
+  border:none;border-radius:4px;cursor:pointer;font-size:9px;font-family:var(--font);
+  font-weight:700;padding:2px 7px;white-space:nowrap;
+  transition:transform .12s,opacity .12s,box-shadow .12s;letter-spacing:.02em;
+}
+.status-tag:hover{transform:scale(1.06);opacity:.9;}
+.status-none{background:rgba(255,255,255,.06);color:var(--t3);}
+.status-stable{background:rgba(34,197,94,.15);color:#22c55e;box-shadow:0 0 6px rgba(34,197,94,.12);}
+.status-watch{background:rgba(245,158,11,.15);color:#f59e0b;box-shadow:0 0 6px rgba(245,158,11,.12);}
+.status-in-refactor{background:rgba(77,159,255,.15);color:#4d9fff;box-shadow:0 0 6px rgba(77,159,255,.12);}
+.status-deprecated{background:rgba(107,114,128,.15);color:#9ca3af;}
+.status-blocked{background:rgba(255,95,95,.15);color:#ff5f5f;box-shadow:0 0 6px rgba(255,95,95,.12);}
+
+/* ── Health bar ── */
+.bar-cell{width:80px;}
+.health-bar{height:5px;border-radius:3px;background:rgba(255,255,255,.05);}
+.health-bar-fill{height:100%;border-radius:3px;transition:width .6s cubic-bezier(.22,1,.36,1);}
+
+/* ── Loading / error rows ── */
+.loading-row td{color:var(--t3);font-style:italic;}
+.loading-row td span.shimmer{
+  display:inline-block;
+  background:linear-gradient(90deg,var(--bg2) 25%,rgba(255,255,255,.15) 50%,var(--bg2) 75%);
+  background-size:200% auto;
+  animation:shimmer 1.6s linear infinite;
+  border-radius:3px;width:200px;height:10px;vertical-align:middle;
+}
+.error-row td{color:var(--red);}
+.repo-link{color:var(--t1);transition:color .15s;}
+.repo-link:hover{color:var(--acc);}
+
+/* ── Table scroll wrapper (horizontal scroll on small screens) ── */
+.table-scroll-wrap{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+.table-scroll-wrap::-webkit-scrollbar{height:4px;}
+.table-scroll-wrap::-webkit-scrollbar-track{background:transparent;}
+.table-scroll-wrap::-webkit-scrollbar-thumb{background:rgba(255,255,255,.25);border-radius:2px;}
+
+/* ── Charts ── */
+.charts-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:28px;}
+@media(max-width:700px){.charts-row{grid-template-columns:1fr;}}
+
+/* ── Responsive breakpoints ── */
+
+/* ≤1100px: compress container padding, hide some topbar buttons */
+@media(max-width:1100px){
+  .container{padding:18px 14px;}
+  .topbar{padding:0 14px;gap:6px;}
+  .topbar-right .btn{font-size:10px;padding:5px 10px;}
+}
+
+/* ── More menu ── */
+.more-menu-wrap{position:relative;display:none;}
+.more-menu-btn{display:flex;width:28px;height:28px;padding:0;background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--t1);font-size:16px;cursor:pointer;align-items:center;justify-content:center;transition:all 0.15s;letter-spacing:1px;font-weight:700;flex-shrink:0;}
+.more-menu-btn:hover{background:var(--bg4);border-color:rgba(255,255,255,0.38);color:var(--acc);}
+.more-menu{position:absolute;top:calc(100% + 6px);right:0;min-width:160px;background:var(--bg2);border:1px solid rgba(255,255,255,0.15);border-radius:8px;box-shadow:0 12px 40px rgba(0,0,0,0.6);z-index:1000;padding:4px;animation:slide-in-up 0.18s ease;}
+.more-menu-item{display:flex;align-items:center;gap:8px;padding:7px 12px;border-radius:5px;font-size:11px;color:var(--t1);cursor:pointer;transition:all 0.12s;border:none;background:transparent;width:100%;text-align:left;font-family:inherit;font-weight:500;white-space:nowrap;}
+.more-menu-item:hover{background:var(--hover);color:var(--acc);}
+.more-menu-sep{height:1px;background:var(--border);margin:3px 0;}
+
+/* ≤860px: topbar wraps, hide secondary buttons, show More */
+@media(max-width:860px){
+  .topbar{flex-wrap:wrap;height:auto;padding:8px 12px;gap:6px;}
+  .topbar-logo-wrap{flex:0 0 auto;}
+  .topbar-right{flex-wrap:wrap;gap:4px;margin-left:auto;}
+  .topbar-right .btn.hide-sm{display:none;}
+  .more-menu-wrap{display:block;}
+  .container{padding:14px 10px;}
+  .add-bar{gap:6px;}
+  .repo-input{min-width:140px;}
+  .auth-bar{flex-wrap:wrap;}
+}
+
+/* ≤640px: stack add-bar, minimal topbar */
+@media(max-width:640px){
+  .topbar-right .btn:not(.always-show-btn){display:none;}
+  .topbar-right a.btn{display:inline-flex;} /* keep Grasp link */
+  .add-bar{flex-direction:column;gap:8px;}
+  .add-bar .repo-input{width:100%;min-width:0;box-sizing:border-box;}
+  .add-bar .btn{width:100%;justify-content:center;}
+  .summary-strip{grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;}
+  .summary-card{padding:12px 14px;}
+  .container{padding:10px 8px;}
+  .auth-bar{flex-wrap:wrap;gap:6px;}
+  .token-input{min-width:120px;}
+  .charts-row{grid-template-columns:1fr;}
+}
+.chart-card{
+  background:var(--card-bg);border:1px solid var(--border);border-radius:10px;
+  padding:18px;transition:border-color .2s,box-shadow .2s;
+  animation:card-in .45s ease both;
+}
+.chart-card:hover{border-color:rgba(255,255,255,.25);box-shadow:0 4px 20px rgba(255,255,255,.08);}
+.chart-title{font-size:10px;color:var(--t2);margin-bottom:14px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;}
+
+/* ── Score bar chart ── */
+.score-bars{display:flex;flex-direction:column;gap:9px;}
+.score-bar-row{display:flex;align-items:center;gap:8px;font-size:10px;}
+.score-bar-label{width:110px;color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-shrink:0;}
+.score-bar-track{flex:1;height:12px;background:rgba(255,255,255,.04);border-radius:6px;overflow:hidden;}
+.score-bar-fill{height:100%;border-radius:6px;transition:width .7s cubic-bezier(.22,1,.36,1);}
+.score-bar-num{width:32px;text-align:right;color:var(--t2);flex-shrink:0;font-weight:700;}
+
+/* ── Issue breakdown ── */
+.issue-list{display:flex;flex-direction:column;gap:8px;}
+.issue-row{display:flex;align-items:center;gap:8px;font-size:10px;}
+.issue-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;box-shadow:0 0 4px currentColor;}
+.issue-name{flex:1;color:var(--t2);}
+.issue-count{color:var(--t3);}
+
+/* ── Empty state ── */
+.empty{text-align:center;padding:72px 20px;color:var(--t3);}
+.empty-icon{font-size:44px;margin-bottom:14px;animation:logo-float 3s ease-in-out infinite;}
+.empty-sub{font-size:11px;margin-top:8px;color:var(--t3);}
+.empty-title{font-size:14px;color:var(--t2);font-weight:600;margin-bottom:4px;}
+
+/* ── Status bar ── */
+.status-bar{
+  height:22px;
+  background:linear-gradient(90deg,var(--acc),var(--acc2),var(--acc));
+  background-size:200% 100%;
+  animation:shimmer 6s linear infinite;
+  display:flex;align-items:center;justify-content:flex-end;
+  padding:0 14px;font-size:9px;font-weight:700;font-family:var(--font);
+  gap:6px;color:rgba(0,0,0,.85);overflow:hidden;
+  position:fixed;bottom:0;left:0;right:0;z-index:100;
+  letter-spacing:.04em;
+}
+.status-bar span{opacity:.55;font-weight:400;}
+
+/* ── Themes ── */
+[data-theme="light"]{--bg0:#f8fafc;--bg1:#f1f5f9;--bg2:#e8f0f8;--bg3:#dde6f0;--bg4:#c8d8e8;--hover:#d5e2ef;--t0:#0f172a;--t1:#1e3a5f;--t2:#475569;--t3:#94a3b8;--acc:#00a884;--acc2:#008f70;--accbg:rgba(0,168,132,.08);--border:rgba(15,23,42,.09);--border2:rgba(15,23,42,.05);--card-bg:rgba(0,168,132,.04);}
+[data-theme="matrix"]{--bg0:#000000;--bg1:#0a0f0a;--bg2:#0d140d;--bg3:#121b12;--t1:#00cc33;--t2:#00882a;--t3:#005511;--acc:#00ff41;--acc2:#00cc33;--border:rgba(0,255,65,.15);--card-bg:rgba(0,255,65,.04);}
+[data-theme="amber"]{--bg0:#000000;--bg1:#0a0800;--bg2:#0f0e00;--bg3:#1a1500;--t1:#cc8a00;--t2:#886000;--t3:#554000;--acc:#ffb000;--acc2:#ffd060;--border:rgba(255,176,0,.18);--card-bg:rgba(255,176,0,.04);}
+[data-theme="dracula"]{--bg0:#1e1f29;--bg1:#282a36;--bg2:#2d2f3f;--bg3:#363848;--t1:#d9d9d0;--t2:#6272a4;--t3:#44475a;--acc:#ff79c6;--acc2:#ff92d0;--border:rgba(98,114,164,.25);--card-bg:rgba(255,121,198,.04);}
+[data-theme="nord"]{--bg0:#242933;--bg1:#2e3440;--bg2:#323846;--bg3:#3b4252;--t1:#d8dee9;--t2:#9da7b2;--t3:#616e7c;--acc:#88c0d0;--acc2:#a8d8e8;--border:rgba(236,239,244,.1);--card-bg:rgba(136,192,208,.04);}
+[data-theme="tokyo"]{--bg0:#0d0e17;--bg1:#1a1b2e;--bg2:#1f2042;--bg3:#24264d;--t1:#9aa5ce;--t2:#6272a4;--t3:#414868;--acc:#7aa2f7;--acc2:#9bb5ff;--border:rgba(122,162,247,.12);--card-bg:rgba(122,162,247,.04);}
+[data-theme="catppuccin"]{--bg0:#181825;--bg1:#1e1e2e;--bg2:#24273a;--bg3:#313244;--t1:#bac2de;--t2:#a6adc8;--t3:#6c7086;--acc:#cba6f7;--acc2:#ddb8ff;--border:rgba(203,166,247,.1);--card-bg:rgba(203,166,247,.04);}
+[data-theme="gruvbox"]{--bg0:#1d2021;--bg1:#282828;--bg2:#3c3836;--bg3:#504945;--t1:#d5c4a1;--t2:#a89984;--t3:#7c6f64;--acc:#d79921;--acc2:#f0b030;--border:rgba(235,219,178,.12);--card-bg:rgba(215,153,33,.04);}
+[data-theme="obsidian"]{--bg0:#0a0a0a;--bg1:#111111;--bg2:#161616;--bg3:#1c1c1c;--t1:#c9a84c;--t2:#9a7d35;--t3:#6b5520;--acc:#c9a84c;--acc2:#e8c060;--border:rgba(201,168,76,.18);--card-bg:rgba(201,168,76,.04);}
+[data-theme="midnight"]{--bg0:#070a14;--bg1:#0a0f1e;--bg2:#0e1628;--bg3:#131e34;--t1:#b8c8ef;--t2:#6888cc;--t3:#3a5088;--acc:#4d9fff;--acc2:#70b8ff;--border:rgba(77,159,255,.12);--card-bg:rgba(77,159,255,.04);}
+[data-theme="carbon"]{--bg0:#0f0f0f;--bg1:#161616;--bg2:#1c1c1c;--bg3:#262626;--t1:#c6c6c6;--t2:#8d8d8d;--t3:#525252;--acc:#0f62fe;--acc2:#4589ff;--border:rgba(82,82,82,.4);--card-bg:rgba(15,98,254,.04);}
+[data-theme="noir"]{--bg0:#000000;--bg1:#0a0a0a;--bg2:#141414;--bg3:#1e1e1e;--t1:#cccccc;--t2:#888888;--t3:#444444;--acc:#ffffff;--acc2:#cccccc;--border:rgba(255,255,255,.12);--card-bg:rgba(255,255,255,.04);}
+[data-theme="synthwave"]{--bg0:#0d0221;--bg1:#170a30;--bg2:#1e0f3f;--bg3:#271450;--t1:#d4a8ff;--t2:#9966cc;--t3:#663399;--acc:#ff2d87;--acc2:#ff80c0;--border:rgba(255,45,135,.2);--card-bg:rgba(255,45,135,.04);}
+[data-theme="ocean"]{--bg0:#030d10;--bg1:#061520;--bg2:#0a1e2e;--bg3:#0e2740;--t1:#90d4ca;--t2:#4da8a0;--t3:#267870;--acc:#00dcc8;--acc2:#40ece0;--border:rgba(0,220,200,.12);--card-bg:rgba(0,220,200,.04);}
+[data-theme="forest"]{--bg0:#0a120a;--bg1:#111b11;--bg2:#162316;--bg3:#1c2e1c;--t1:#a0c080;--t2:#6a8f50;--t3:#3d5a28;--acc:#7cba50;--acc2:#9ad270;--border:rgba(100,160,80,.15);--card-bg:rgba(124,186,80,.04);}
+[data-theme="sunset"]{--bg0:#0f080e;--bg1:#1a1020;--bg2:#22162c;--bg3:#2e1d38;--t1:#ffaa88;--t2:#cc7755;--t3:#884422;--acc:#ff7755;--acc2:#ff9977;--border:rgba(255,119,85,.15);--card-bg:rgba(255,119,85,.04);}
+[data-theme="hc"]{--bg0:#000000;--bg1:#000000;--bg2:#0a0a0a;--bg3:#111111;--t1:#ffffff;--t2:#ffff00;--t3:#ffee00;--acc:#ffff00;--acc2:#ffffaa;--border:rgba(255,255,0,.7);--card-bg:rgba(255,255,0,.06);}
+[data-theme="solarized"]{--bg0:#fdf6e3;--bg1:#eee8d5;--bg2:#e3ddc8;--bg3:#d4cdb5;--t1:#002b36;--t2:#586e75;--t3:#657b83;--acc:#268bd2;--acc2:#4aa8e8;--border:rgba(7,54,66,.15);--card-bg:rgba(38,139,210,.06);}
+[data-theme="matrix"] body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,20,0,.18) 3px,rgba(0,20,0,.18) 4px);pointer-events:none;z-index:9998}
+
+/* ── Theme button & picker ── */
+.theme-btn-wrap{position:relative;display:inline-flex;}
+.theme-btn{
+  background:transparent;border:1px solid var(--border);color:var(--t2);
+  font-family:var(--font);font-size:11px;padding:5px 9px;border-radius:5px;
+  cursor:pointer;transition:all .15s;
+  display:inline-flex;align-items:center;justify-content:center;line-height:1;
+}
+.theme-btn:hover{border-color:var(--acc);color:var(--t1);box-shadow:0 0 0 2px rgba(255,255,255,.1);}
+.theme-picker{
+  position:absolute;top:calc(100% + 6px);right:0;width:180px;
+  background:var(--bg2);border:1px solid rgba(255,255,255,.18);
+  border-radius:9px;box-shadow:0 14px 44px rgba(0,0,0,.65);
+  z-index:2000;padding:4px;max-height:72vh;overflow-y:auto;
+  animation:slide-in-up .18s ease;
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+}
+.theme-pick-item{display:flex;align-items:center;gap:8px;width:100%;padding:5px 8px;background:none;border:none;border-radius:5px;cursor:pointer;color:var(--t2);font-size:11px;font-family:var(--font);text-align:left;transition:all .12s;}
+.theme-pick-item:hover{background:rgba(255,255,255,.1);color:var(--t1);}
+.theme-pick-item.active{background:rgba(255,255,255,.15);color:var(--acc);}
+.theme-pick-swatch{width:10px;height:10px;border-radius:50%;flex-shrink:0;box-shadow:0 0 0 1px rgba(0,0,0,.2);}
+.theme-pick-cat{font-size:8px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:1px;padding:6px 8px 2px;cursor:default;}
+
+/* ── Help FAB & modal ── */
+.help-fab{
+  position:fixed;bottom:32px;right:16px;
+  background:linear-gradient(135deg,var(--acc),var(--acc2));
+  color:#fff;border:none;border-radius:20px;
+  padding:5px 13px;font-size:10px;font-weight:700;font-family:var(--font);
+  cursor:pointer;z-index:500;
+  box-shadow:0 2px 14px rgba(255,255,255,.45);
+  transition:all .15s;
+  animation:pulse-glow 3s ease-in-out infinite;
+}
+.help-fab:hover{opacity:1;transform:scale(1.05);animation:none;}
+.kbd-fab{position:fixed;bottom:32px;right:72px;height:30px;width:30px;border-radius:50%;background:var(--bg2);border:1px solid var(--border);color:var(--t2);font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:499;transition:all 0.2s;box-shadow:0 2px 8px rgba(0,0,0,0.3);font-family:var(--font);}
+.kbd-fab:hover{transform:translateY(-2px);background:var(--bg3);color:var(--acc);box-shadow:0 6px 20px rgba(0,0,0,0.5);}
+.kbd-popover{position:fixed;bottom:74px;right:16px;width:280px;background:rgba(20,22,30,0.93);border:1px solid var(--border);border-radius:10px;padding:14px 16px;color:var(--t1);font-size:11px;line-height:1.6;z-index:502;box-shadow:0 8px 32px rgba(0,0,0,0.55);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);font-family:var(--font);}
+.kbd-popover-title{font-size:10px;font-weight:700;color:var(--acc);margin-bottom:8px;letter-spacing:0.5px;text-transform:uppercase;}
+.kbd-row{display:flex;justify-content:space-between;gap:14px;padding:2px 0;}
+.kbd-key{color:var(--t0);font-weight:600;white-space:nowrap;}
+.kbd-desc{color:var(--t2);text-align:right;flex:1;}
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:1000;
+  display:flex;align-items:center;justify-content:center;padding:16px;
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+}
+.modal{
+  background:var(--bg1);border:1px solid rgba(255,255,255,.2);border-radius:13px;
+  width:100%;max-width:640px;max-height:88vh;display:flex;flex-direction:column;
+  box-shadow:0 24px 80px rgba(0,0,0,.85),0 0 0 1px rgba(255,255,255,.06);
+  animation:slide-in-up .22s ease;
+}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.modal-title{font-size:13px;font-weight:700;color:var(--t1);}
+.modal-close{background:none;border:none;color:var(--t3);font-size:18px;cursor:pointer;padding:0 4px;line-height:1;transition:color .12s;}
+.modal-close:hover{color:var(--t1);}
+.modal-body{overflow-y:auto;flex:1;padding:0;}
+.modal-footer{padding:12px 18px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;flex-shrink:0;}
+.modal-ok{
+  background:linear-gradient(135deg,var(--acc),var(--acc2));
+  color:#fff;border:none;border-radius:6px;padding:7px 20px;
+  font-size:11px;font-weight:700;font-family:var(--font);cursor:pointer;
+  transition:opacity .15s,transform .15s;
+}
+.modal-ok:hover{opacity:.85;transform:translateY(-1px);}
+.help-section{padding:14px 18px;border-bottom:1px solid var(--border);}
+.help-section:last-child{border-bottom:none;}
+.help-section-title{font-size:10px;font-weight:700;color:var(--acc);text-transform:uppercase;letter-spacing:.08em;margin-bottom:9px;}
+.help-kv{display:flex;align-items:baseline;gap:8px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.03);}
+.help-kv:last-child{border-bottom:none;}
+.help-key{font-size:10px;color:var(--t2);font-family:var(--font);flex-shrink:0;min-width:120px;}
+.help-val{font-size:10px;color:var(--t3);line-height:1.5;}
+.leaderboard { margin-top: 2rem; padding: 1rem 1.5rem; background: var(--card-bg, #1e293b); border-radius: 0.75rem; max-width: 480px; }
+.leaderboard h3 { margin: 0 0 0.75rem; font-size: 1rem; color: var(--text, #f1f5f9); }
+
+/* ── Live sync ── */
+.sync-wrap{position:relative;display:inline-flex;align-items:center;}
+.sync-btn{
+  background:transparent;border:1px solid var(--border);color:var(--t3);
+  font-family:var(--font);font-size:10px;padding:4px 9px;border-radius:5px;
+  cursor:pointer;transition:all .15s;white-space:nowrap;display:flex;align-items:center;gap:5px;
+}
+.sync-btn:hover{border-color:rgba(255,255,255,.4);color:var(--t1);}
+.sync-btn.connected{border-color:rgba(34,197,94,.4);color:#22c55e;}
+.sync-btn.connecting{border-color:rgba(245,158,11,.4);color:#f59e0b;}
+.sync-dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0;}
+.sync-dot.pulse{animation:dot-pulse 1.4s ease-in-out infinite;}
+.sync-panel{
+  position:absolute;top:calc(100% + 5px);right:0;width:260px;
+  background:var(--bg2);border:1px solid rgba(255,255,255,.2);
+  border-radius:9px;box-shadow:0 12px 40px rgba(0,0,0,.7);
+  z-index:9000;padding:12px 14px;
+  animation:slide-in-up .18s ease;
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+}
+.sync-panel-title{font-size:10px;font-weight:700;color:var(--acc);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;}
+.sync-row{display:flex;align-items:center;gap:6px;margin-bottom:7px;}
+.sync-label{font-size:10px;color:var(--t3);min-width:56px;}
+.sync-input{flex:1;background:var(--bg3);border:1px solid var(--border);color:var(--t1);font-size:10px;font-family:var(--font);padding:4px 7px;border-radius:4px;outline:none;transition:border-color .15s;}
+.sync-input:focus{border-color:var(--acc);}
+.sync-connect-btn{width:100%;margin-top:4px;background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff;border:none;border-radius:5px;padding:6px;font-size:10px;font-weight:700;font-family:var(--font);cursor:pointer;transition:opacity .15s;}
+.sync-connect-btn:hover{opacity:.85;}
+.sync-disconnect-btn{width:100%;margin-top:4px;background:transparent;color:var(--red);border:1px solid rgba(255,95,95,.3);border-radius:5px;padding:5px;font-size:10px;font-weight:700;font-family:var(--font);cursor:pointer;transition:all .15s;}
+.sync-disconnect-btn:hover{background:rgba(255,95,95,.1);}
+.sync-presence{margin-top:8px;border-top:1px solid var(--border);padding-top:8px;}
+.sync-presence-title{font-size:9px;color:var(--t3);margin-bottom:5px;}
+.sync-peer{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--t2);padding:2px 0;}
+.sync-peer-dot{width:5px;height:5px;border-radius:50%;background:#22c55e;flex-shrink:0;}
+.sync-peer.ro .sync-peer-dot{background:#f59e0b;}
+.sync-share-row{margin-top:8px;border-top:1px solid var(--border);padding-top:8px;}
+.sync-share-btn{width:100%;background:transparent;border:1px solid rgba(255,255,255,.3);color:var(--acc2);border-radius:5px;padding:5px;font-size:10px;font-family:var(--font);cursor:pointer;transition:all .15s;}
+.sync-share-btn:hover{background:rgba(255,255,255,.1);color:#fff;}
+.readonly-banner{
+  background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);
+  border-radius:6px;padding:6px 14px;font-size:10px;color:#f59e0b;
+  text-align:center;margin-bottom:14px;display:none;
+}
+.readonly-banner.visible{display:block;}
+.lb-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.35rem 0; border-bottom: 1px solid var(--border, #334155); }
+.lb-row:last-child { border-bottom: none; }
+.lb-medal { font-size: 1.1rem; width: 1.5rem; text-align: center; }
+.lb-repo { flex: 1; font-size: 0.85rem; color: var(--text-muted, #94a3b8); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lb-score { font-size: 0.9rem; font-weight: 600; }
+/* ── Extra metric badges ── */
+.badge-neutral{display:inline-block;padding:1px 5px;border-radius:3px;font-size:10px;background:rgba(148,163,184,.12);color:var(--t2);}
+.badge-warn{display:inline-block;padding:1px 5px;border-radius:3px;font-size:10px;background:rgba(245,158,11,.15);color:#f59e0b;}
+.badge-ok{display:inline-block;padding:1px 5px;border-radius:3px;font-size:10px;background:rgba(34,197,94,.15);color:#22c55e;}
+.num-cell{text-align:right;}
+/* ── DORA detail row ── */
+.detail-row td{padding:0;border-bottom:1px solid var(--border);}
+.repo-table tbody tr:not(.detail-row){cursor:pointer;}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-logo-wrap">
+    <svg class="logo-mark" viewBox="0 0 42 34" width="35" height="28" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <rect width="42" height="34" rx="9" fill="url(#db-lg-bg)"/>
+      <!-- graph nodes -->
+      <circle cx="14" cy="8" r="2.6" fill="#ffffff"/>
+      <circle cx="6" cy="21" r="2.2" fill="#6b4fbb" opacity="0.9"/>
+      <circle cx="22" cy="21" r="2.2" fill="#cccccc" opacity="0.9"/>
+      <circle cx="14" cy="15" r="3.2" fill="url(#db-lg-center)"/>
+      <!-- edges -->
+      <line x1="14" y1="11.8" x2="14" y2="10.6" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" opacity="0.9"/>
+      <line x1="11.2" y1="17.2" x2="8.2" y2="19.2" stroke="#6b4fbb" stroke-width="1.5" stroke-linecap="round" opacity="0.8"/>
+      <line x1="16.8" y1="17.2" x2="19.8" y2="19.2" stroke="#cccccc" stroke-width="1.5" stroke-linecap="round" opacity="0.8"/>
+      <path d="M7.6 22.8 Q14 27.4 20.4 22.8" stroke="rgba(255,255,255,0.35)" stroke-width="1" fill="none" stroke-linecap="round"/>
+      <!-- divider -->
+      <line x1="28" y1="6" x2="28" y2="28" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>
+      <!-- bar chart (3 ascending bars) -->
+      <rect x="30" y="19" width="3.2" height="9" rx="1" fill="#ffffff" opacity="0.9"/>
+      <rect x="34.6" y="15" width="3.2" height="13" rx="1" fill="#6b4fbb" opacity="0.85"/>
+      <rect x="39.2" y="11" width="3.2" height="17" rx="1" fill="#cccccc" opacity="0.8"/>
+      <defs>
+        <linearGradient id="db-lg-bg" x1="0" y1="0" x2="42" y2="34" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#1a1330"/>
+          <stop offset="100%" stop-color="#000000"/>
+        </linearGradient>
+        <radialGradient id="db-lg-center" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#ffffff"/>
+          <stop offset="100%" stop-color="#6b4fbb"/>
+        </radialGradient>
+      </defs>
+    </svg>
+    <div>
+      <div class="logo-text">OrbitGrasp</div>
+      <div class="topbar-sub">Team Dashboard</div>
+    </div>
+    <div style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.35);color:var(--acc);font-size:9px;font-weight:700;padding:2px 8px;border-radius:12px;margin-left:8px;white-space:nowrap;display:inline-flex;align-items:center;gap:4;height:18px;letter-spacing:0.3px;margin-top:2px;">
+      <span>🦊</span>
+      <span>GitLab Transcend Hackathon — 13-Day Submission</span>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <!-- Workspace switcher -->
+    <div class="ws-wrap" id="ws-wrap">
+      <button class="ws-btn" id="ws-btn" title="Workspaces — click to manage">
+        <span id="ws-name-label">Default</span> ▾
+      </button>
+      <div class="ws-dropdown" id="ws-dropdown" style="display:none;"></div>
+    </div>
+    <!-- Live sync button -->
+    <div class="sync-wrap" id="sync-wrap">
+      <button class="sync-btn" id="sync-btn" title="Live collaboration sync" onclick="toggleSyncPanel()">
+        <span class="sync-dot" id="sync-dot"></span>
+        <span id="sync-label">Sync</span>
+      </button>
+      <div class="sync-panel" id="sync-panel" style="display:none;"></div>
+    </div>
+    <a href="index.html" class="btn secondary always-show-btn" title="Open OrbitGrasp analyser"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>OrbitGrasp</a>
+    <button class="btn secondary hide-sm" onclick="shareWorkspace()" title="Copy shareable URL for this workspace"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>Share</button>
+    <button class="btn secondary hide-sm" onclick="reanalyzeAll()" title="Re-run analysis on all loaded repos"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>Re-analyze</button>
+    <button class="btn secondary hide-sm" onclick="exportCSV()" title="Export as CSV"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>CSV</button>
+    <button class="btn secondary hide-sm" onclick="exportJSON()" title="Export workspace as JSON"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>JSON</button>
+    <button class="btn secondary hide-sm" onclick="importJSON()" title="Import workspace from JSON file"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Import</button>
+    <button class="btn secondary hide-sm" onclick="clearAll()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>Clear</button>
+    <!-- More menu (visible ≤860px) -->
+    <div class="more-menu-wrap" id="more-wrap">
+      <button class="more-menu-btn" id="more-btn" title="More actions" aria-label="More actions" onclick="toggleMoreMenu()">···</button>
+      <div class="more-menu" id="more-menu" style="display:none;">
+        <button class="more-menu-item" onclick="shareWorkspace();closeMoreMenu()"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>Share</button>
+        <button class="more-menu-item" onclick="reanalyzeAll();closeMoreMenu()"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>Re-analyze all</button>
+        <div class="more-menu-sep"></div>
+        <button class="more-menu-item" onclick="exportCSV();closeMoreMenu()"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Download CSV</button>
+        <button class="more-menu-item" onclick="exportJSON();closeMoreMenu()"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Download JSON</button>
+        <button class="more-menu-item" onclick="importJSON();closeMoreMenu()"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Import JSON</button>
+        <div class="more-menu-sep"></div>
+        <button class="more-menu-item" onclick="clearAll();closeMoreMenu()"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>Clear all repos</button>
+      </div>
+    </div>
+    <div class="theme-btn-wrap" id="theme-wrap">
+      <button class="theme-btn always-show-btn" id="theme-btn" title="Theme — click to cycle, hover for picker" aria-label="Theme"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 011.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg></button>
+      <div class="theme-picker" id="theme-picker" style="display:none;"></div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- Read-only banner (shown when ?readonly=1) -->
+  <div class="readonly-banner" id="readonly-banner">👁 Read-only mode — you can view this workspace but cannot make changes</div>
+
+  <!-- Auth bar -->
+  <div class="auth-bar" id="auth-bar">
+    <span style="white-space:nowrap;color:var(--t3)">🔑 Auth</span>
+    <select class="auth-mode-select" id="auth-mode" onchange="onAuthModeChange(this.value)">
+      <option value="none">No Auth</option>
+      <option value="pat">GitHub Token (PAT)</option>
+      <option value="github_app">GitHub App</option>
+      <option value="gitlab">GitLab Token</option>
+      <option value="ghe">GitHub Enterprise</option>
+      <option value="bitbucket">Bitbucket</option>
+      <option value="azure">Azure DevOps</option>
+      <option value="gitea">Gitea</option>
+    </select>
+    <!-- GitHub PAT fields -->
+    <span id="auth-pat-fields" style="display:none;align-items:center;gap:6px;flex-wrap:wrap">
+      <input id="token-input" class="token-input" type="password" placeholder="ghp_… personal access token" oninput="saveToken(this.value)">
+      <button class="auth-key-btn" onclick="clearToken()" style="font-size:9px">clear</button>
+    </span>
+    <!-- GitHub App fields -->
+    <span id="auth-app-fields" style="display:none;align-items:center;gap:6px;flex-wrap:wrap">
+      <input id="app-id-input" class="auth-app-id" type="text" placeholder="App ID" oninput="saveAppId(this.value)">
+      <button class="auth-key-btn" id="key-btn" onclick="openKeyModal()"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg><span id="key-btn-text">Private key</span></button>
+    </span>
+    <!-- GitLab fields -->
+    <span id="auth-gitlab-fields" style="display:none;align-items:center;gap:6px;flex-wrap:wrap">
+      <input id="gitlab-token-input" class="token-input" type="password" placeholder="glpat-… GitLab PAT" oninput="saveGitlabToken(this.value)">
+      <input id="gitlab-host-input" class="token-input" type="text" placeholder="self-hosted host (optional)" style="width:170px" oninput="saveGitlabHost(this.value)">
+    </span>
+    <!-- GitHub Enterprise fields -->
+    <span id="auth-ghe-fields" style="display:none;align-items:center;gap:6px;flex-wrap:wrap">
+      <input id="ghe-token-input" class="token-input" type="password" placeholder="ghp_… GHE token" oninput="saveGheToken(this.value)">
+      <input id="ghe-host-input" class="token-input" type="text" placeholder="github.mycompany.com" style="width:170px" oninput="saveGheHost(this.value)">
+    </span>
+    <!-- Bitbucket fields -->
+    <span id="auth-bb-fields" style="display:none;align-items:center;gap:6px;flex-wrap:wrap">
+      <input id="bb-username-input" class="token-input" type="text" placeholder="username" style="width:110px" oninput="saveBbUsername(this.value)">
+      <input id="bb-password-input" class="token-input" type="password" placeholder="app password" oninput="saveBbPassword(this.value)">
+    </span>
+    <!-- Azure DevOps fields -->
+    <span id="auth-azure-fields" style="display:none;align-items:center;gap:6px;flex-wrap:wrap">
+      <input id="azure-pat-input" class="token-input" type="password" placeholder="Azure DevOps PAT" oninput="saveAzurePat(this.value)">
+    </span>
+    <!-- Gitea fields -->
+    <span id="auth-gitea-fields" style="display:none;align-items:center;gap:6px;flex-wrap:wrap">
+      <input id="gitea-token-input" class="token-input" type="password" placeholder="Gitea token" oninput="saveGiteaToken(this.value)">
+      <input id="gitea-host-input" class="token-input" type="text" placeholder="gitea.mycompany.com" style="width:170px" oninput="saveGiteaHost(this.value)">
+    </span>
+    <span id="auth-desc" class="auth-hint">60 req/hr · public repos only</span>
+    <button class="btn secondary" onclick="openLocalFolder()" title="Analyse a local folder" style="margin-left:auto;white-space:nowrap"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>Open Folder</button>
+  </div>
+  <!-- Private key modal -->
+  <div class="key-modal-overlay" id="key-modal-overlay" style="display:none" onclick="closeKeyModal(event)">
+    <div class="key-modal" onclick="event.stopPropagation()">
+      <div class="key-modal-title">🔐 GitHub App Private Key</div>
+      <div class="key-modal-sub">Paste the .pem private key from your GitHub App.<br>Stored in sessionStorage only — cleared when you close the tab. Never leaves your browser.</div>
+      <textarea id="key-textarea" placeholder="-----BEGIN RSA PRIVATE KEY-----&#10;...&#10;-----END RSA PRIVATE KEY-----"></textarea>
+      <div class="key-modal-btns">
+        <button class="btn secondary" onclick="closeKeyModal()">Cancel</button>
+        <button class="btn" onclick="savePrivateKey()">Save key</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add repo -->
+  <div class="add-bar">
+    <input id="repo-input" class="repo-input" placeholder="owner/repo or GitHub URL… (GitLab via MCP)" onkeydown="if(event.key==='Enter')addRepo()">
+    <button class="btn" onclick="addRepo()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Add Repo</button>
+    <button class="btn secondary" onclick="addDefaults()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 2l1.09 2.41L13 5.5l-2.41 1.09L9.5 9l-1.09-2.41L6 5.5l2.41-1.09L9.5 2z"/><path d="M19 9l.77 1.73L21.5 11.5l-1.73.77L19 14l-.77-1.73L16.5 11.5l1.73-.77L19 9z"/><path d="M14 17l.5 1.5 1.5.5-1.5.5-.5 1.5-.5-1.5L12 19l1.5-.5.5-1.5z"/></svg>Load examples</button>
+  </div>
+
+  <!-- Summary strip -->
+  <div id="summary-strip" class="summary-strip" style="display:none;"></div>
+
+  <!-- Empty state -->
+  <div id="empty-state" class="empty">
+    <div class="empty-icon">🏢</div>
+    <div class="empty-title">Add repos to get started</div>
+    <div class="empty-sub">Track health scores, team ownership, and trends across your entire portfolio</div>
+    <div class="empty-sub" style="margin-top:6px;font-size:10px;opacity:.6">Any public GitHub repo · Use a token for private repos</div>
+  </div>
+
+  <!-- Repo table -->
+  <div id="table-section" style="display:none;">
+    <div class="section-title">Repositories</div>
+    <div class="table-scroll-wrap">
+    <table class="repo-table" id="repo-table">
+      <thead>
+        <tr>
+          <th>Repository</th>
+          <th>Grade</th>
+          <th>Score</th>
+          <th class="bar-cell"></th>
+          <th>Trend</th>
+          <th>Score Trend</th>
+          <th>Files</th>
+          <th>Functions</th>
+          <th>Issues</th>
+          <th>Circular</th>
+          <th>Security</th>
+          <th title="Good pattern count">Patterns</th>
+          <th title="Env var issues">Env</th>
+          <th title="Feature flag count">Flags</th>
+          <th>Layers</th>
+          <th>Debt (days)</th>
+          <th>Owner</th>
+          <th>Status</th>
+          <th>Notes</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="repo-tbody"></tbody>
+    </table>
+    </div><!-- /.table-scroll-wrap -->
+    <div id="leaderboard-panel"></div>
+  </div>
+
+  <!-- Charts -->
+  <div id="charts-section" class="charts-row" style="display:none;">
+    <div class="chart-card">
+      <div class="chart-title">📊 Health Score by Repo</div>
+      <div id="score-chart" class="score-bars"></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">🐛 Issue Distribution</div>
+      <div id="issue-chart" class="issue-list"></div>
+    </div>
+  </div>
+
+  <!-- Registry -->
+  <div class="section-header" style="margin-top:32px;display:flex;align-items:center;justify-content:space-between">
+    <h2 style="font-size:14px;font-weight:700;color:var(--t0);margin:0">🗂️ OrbitGrasp Brain Registry</h2>
+    <button id="refresh-registry-btn" style="font-size:10px;padding:4px 10px;background:var(--bg1);border:1px solid var(--border);border-radius:6px;color:var(--t0);cursor:pointer;display:inline-flex;align-items:center;gap:5px;line-height:1"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>Refresh</button>
+  </div>
+  <div id="registry-panel" style="margin-top:10px;background:var(--bg1);border:1px solid var(--border);border-radius:10px;overflow:hidden">
+    <div id="registry-content" style="padding:16px;color:var(--t3);font-size:11px">
+      Connect OrbitGrasp Brain to see indexed repos here. Start with: <code>grasp analyze &lt;path&gt;</code>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── State ─────────────────────────────────────────────────────────────────────
+// Runtime repo rows: {id, name, status, data, error, owner, statusTag, notes, notesUpdatedAt, alertThreshold, scoreHistory}
+var repos = [];
+
+// ── Workspace Storage ─────────────────────────────────────────────────────────
+// grasp_workspaces        → [{id, name, createdAt}]  (index)
+// grasp_workspace_{id}    → WorkspaceData             (per workspace)
+// grasp_active_workspace  → active workspace id
+var WS_PFX  = 'grasp_workspace_';
+var WS_IDX  = 'grasp_workspaces';
+var WS_ACT  = 'grasp_active_workspace';
+
+function loadWorkspaceIndex()   { try { return JSON.parse(localStorage.getItem(WS_IDX) || '[]'); } catch(e) { return []; } }
+function saveWorkspaceIndex(ix) { try { localStorage.setItem(WS_IDX, JSON.stringify(ix)); } catch(e) {} }
+function getActiveWorkspaceId() { return localStorage.getItem(WS_ACT) || null; }
+function setActiveWorkspaceId(id){ try { localStorage.setItem(WS_ACT, id); } catch(e) {} }
+function loadWorkspace(id)      { try { return JSON.parse(localStorage.getItem(WS_PFX + id) || 'null'); } catch(e) { return null; } }
+function saveWorkspace(ws)      { try { localStorage.setItem(WS_PFX + ws.id, JSON.stringify(ws)); } catch(e) {} }
+
+function _makeRepoEntry(name, src) {
+  // src can be an existing WorkspaceData.repos entry to preserve team fields
+  return {
+    name:           name,
+    owner:          (src && src.owner)          || '',
+    statusTag:      (src && src.statusTag)      || '',
+    notes:          (src && src.notes)          || '',
+    notesUpdatedAt: (src && src.notesUpdatedAt) || null,
+    alertThreshold: (src && src.alertThreshold) || null,
+    scoreHistory:   (src && src.scoreHistory)   || [],
+    commitHistory:  (src && src.commitHistory)  || []
+  };
+}
+
+function getOrCreateDefaultWorkspace() {
+  var idx      = loadWorkspaceIndex();
+  var activeId = getActiveWorkspaceId();
+
+  // Load active workspace
+  if (activeId) { var ws = loadWorkspace(activeId); if (ws) return ws; }
+  // Fall back to first in index
+  if (idx.length) { var ws = loadWorkspace(idx[0].id); if (ws) { setActiveWorkspaceId(idx[0].id); return ws; } }
+
+  // Create default workspace — migrate from legacy grasp_dashboard key
+  var id = 'ws_' + Date.now();
+  var legacyNames = [];
+  try { var old = JSON.parse(localStorage.getItem('grasp_dashboard') || '[]'); if (Array.isArray(old)) legacyNames = old; } catch(e) {}
+
+  var ws = { id: id, name: 'Default', createdAt: Date.now(), repos: legacyNames.map(function(n){ return _makeRepoEntry(n, null); }) };
+  idx.push({ id: id, name: ws.name, createdAt: ws.createdAt });
+  saveWorkspaceIndex(idx);
+  saveWorkspace(ws);
+  setActiveWorkspaceId(id);
+  try { localStorage.removeItem('grasp_dashboard'); } catch(e) {}
+  return ws;
+}
+
+function getActiveWorkspace() {
+  var id = getActiveWorkspaceId();
+  if (id) { var ws = loadWorkspace(id); if (ws) return ws; }
+  return getOrCreateDefaultWorkspace();
+}
+
+// Persist the runtime repos array back into the active workspace
+function saveState() {
+  var ws = getActiveWorkspace();
+  // Keep team-field data from persisted entries; merge current repo order
+  var stored = {};
+  ws.repos.forEach(function(e){ stored[e.name] = e; });
+  ws.repos = repos.map(function(r){ return _makeRepoEntry(r.name, stored[r.name] || r); });
+  saveWorkspace(ws);
+}
+
+// ── Team field helpers ─────────────────────────────────────────────────────────
+function setRepoField(repoName, field, value) {
+  // Update runtime row
+  var row = repos.find(function(r){ return r.name === repoName; });
+  if (!row) return;
+  row[field] = value;
+  if (field === 'notes') row.notesUpdatedAt = Date.now();
+  // Persist
+  var ws = getActiveWorkspace();
+  var entry = ws.repos.find(function(e){ return e.name === repoName; });
+  if (entry) { entry[field] = value; if (field === 'notes') entry.notesUpdatedAt = row.notesUpdatedAt; }
+  saveWorkspace(ws);
+}
+
+function pushScoreHistory(repoName, score) {
+  var row = repos.find(function(r){ return r.name === repoName; });
+  var ws  = getActiveWorkspace();
+  var entry = ws.repos.find(function(e){ return e.name === repoName; });
+  var hist  = (entry && entry.scoreHistory) || (row && row.scoreHistory) || [];
+  hist.push({ score: score, ts: Date.now() });
+  if (hist.length > 10) hist = hist.slice(-10);
+  if (row)   row.scoreHistory   = hist;
+  if (entry) entry.scoreHistory = hist;
+  saveWorkspace(ws);
+}
+
+function pushCommitHistory(repoName, activity) {
+  if (!activity) return;
+  var row = repos.find(function(r){ return r.name === repoName; });
+  var ws  = getActiveWorkspace();
+  var entry = ws.repos.find(function(e){ return e.name === repoName; });
+  var hist  = (entry && entry.commitHistory) || (row && row.commitHistory) || [];
+  // Avoid duplicating same-day entries — only append if last entry was > 6 hours ago
+  var last = hist[hist.length - 1];
+  var now = Date.now();
+  if (!last || (now - last.ts) > 6 * 60 * 60 * 1000) {
+    hist.push({ c7d: activity.commits7d, c30d: activity.commits30d, ts: now });
+    if (hist.length > 14) hist = hist.slice(-14); // keep ~2 weeks of daily snapshots
+    if (row)   row.commitHistory   = hist;
+    if (entry) entry.commitHistory = hist;
+    saveWorkspace(ws);
+  } else {
+    // Update last entry in place (same day refresh)
+    last.c7d  = activity.commits7d;
+    last.c30d = activity.commits30d;
+    if (row)   row.commitHistory   = hist;
+    if (entry) entry.commitHistory = hist;
+    saveWorkspace(ws);
+  }
+}
+
+// ── Status tag cycling ────────────────────────────────────────────────────────
+var STATUS_CYCLE = ['stable', 'watch', 'in-refactor', 'deprecated', 'blocked', ''];
+
+function cycleStatus(repoName) {
+  var row = repos.find(function(r){ return r.name === repoName; });
+  if (!row) return;
+  var idx  = STATUS_CYCLE.indexOf(row.statusTag);
+  var next = STATUS_CYCLE[(idx + 1) % STATUS_CYCLE.length];
+  setRepoField(repoName, 'statusTag', next);
+  render();
+}
+
+// ── Workspace UI ──────────────────────────────────────────────────────────────
+function renderWorkspaceLabel() {
+  var ws = getActiveWorkspace();
+  var el = document.getElementById('ws-name-label');
+  if (el) el.textContent = ws.name;
+}
+
+function buildWorkspaceDropdown() {
+  var dd  = document.getElementById('ws-dropdown');
+  var idx = loadWorkspaceIndex();
+  var aid = getActiveWorkspaceId();
+  dd.innerHTML = '';
+
+  // List existing workspaces
+  idx.forEach(function(item) {
+    var div = document.createElement('div');
+    div.className = 'ws-item' + (item.id === aid ? ' active' : '');
+    div.innerHTML =
+      '<span class="ws-item-name">' + esc(item.name) + '</span>' +
+      (idx.length > 1 ? '<button class="ws-item-del" title="Delete workspace" onclick="deleteWorkspace(\'' + item.id + '\');event.stopPropagation()">✕</button>' : '');
+    div.onclick = function() { switchWorkspace(item.id); };
+    dd.appendChild(div);
+  });
+
+  // Divider + new workspace row
+  var sep = document.createElement('div');
+  sep.style.cssText = 'border-top:1px solid var(--border);margin:6px 0 4px;';
+  dd.appendChild(sep);
+
+  var row = document.createElement('div');
+  row.className = 'ws-new-row';
+  row.innerHTML = '<input class="ws-new-input" id="ws-new-name" placeholder="New workspace name…" onkeydown="if(event.key===\'Enter\')createWorkspace()"><button class="ws-new-btn" onclick="createWorkspace()">+</button>';
+  dd.appendChild(row);
+}
+
+function switchWorkspace(id) {
+  setActiveWorkspaceId(id);
+  repos = [];
+  hideWorkspaceDropdown();
+  var ws = getActiveWorkspace();
+  renderWorkspaceLabel();
+  ws.repos.forEach(function(entry){ addRepoByName(entry.name, entry); });
+  render();
+}
+
+function createWorkspace() {
+  var inp  = document.getElementById('ws-new-name');
+  var name = (inp && inp.value.trim()) || 'Workspace';
+  var id   = 'ws_' + Date.now();
+  var ws   = { id: id, name: name, createdAt: Date.now(), repos: [] };
+  var idx  = loadWorkspaceIndex();
+  idx.push({ id: id, name: name, createdAt: ws.createdAt });
+  saveWorkspaceIndex(idx);
+  saveWorkspace(ws);
+  switchWorkspace(id);
+}
+
+function deleteWorkspace(id) {
+  var idx = loadWorkspaceIndex().filter(function(item){ return item.id !== id; });
+  saveWorkspaceIndex(idx);
+  try { localStorage.removeItem(WS_PFX + id); } catch(e) {}
+  // If we deleted the active workspace, switch to first remaining
+  if (getActiveWorkspaceId() === id) {
+    if (idx.length) { switchWorkspace(idx[0].id); }
+    else { setActiveWorkspaceId(null); repos = []; render(); renderWorkspaceLabel(); }
+  }
+  buildWorkspaceDropdown();
+}
+
+function showWorkspaceDropdown() { buildWorkspaceDropdown(); document.getElementById('ws-dropdown').style.display = ''; }
+function hideWorkspaceDropdown() { document.getElementById('ws-dropdown').style.display = 'none'; }
+
+// ── Re-analyze all ────────────────────────────────────────────────────────────
+function reanalyzeAll() {
+  var names = repos.map(function(r){ return r.name; });
+  repos = [];
+  render();
+  names.forEach(function(name) {
+    var ws  = getActiveWorkspace();
+    var entry = ws.repos.find(function(e){ return e.name === name; }) || null;
+    addRepoByName(name, entry);
+  });
+}
+
+// ── Share / Import workspace via URL ─────────────────────────────────────────
+function _b64uEncode(str) {
+  return btoa(unescape(encodeURIComponent(str))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+function _b64uDecode(str) {
+  var s = str.replace(/-/g,'+').replace(/_/g,'/');
+  while (s.length % 4) s += '=';
+  return decodeURIComponent(escape(atob(s)));
+}
+
+function shareWorkspace() {
+  var ws = getActiveWorkspace();
+  // Encode only name + team fields (no score/analysis data)
+  var payload = {
+    name:  ws.name,
+    repos: ws.repos.map(function(e){ return { name: e.name, owner: e.owner || '', statusTag: e.statusTag || '', notes: e.notes || '' }; })
+  };
+  var encoded = _b64uEncode(JSON.stringify(payload));
+  var url = window.location.origin + window.location.pathname + '?ws=' + encoded;
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(url).then(function(){
+      _flashBtn('⎘ Share', '✓ Copied!');
+    }).catch(function(){ prompt('Copy this URL:', url); });
+  } else {
+    prompt('Copy this URL:', url);
+  }
+}
+
+function _flashBtn(_orig, msg) {
+  // Flash the Share button text briefly, preserving its inner SVG icon.
+  var btns = document.querySelectorAll('.btn.secondary');
+  for (var i = 0; i < btns.length; i++) {
+    if (btns[i].textContent.trim().indexOf('Share') !== -1) {
+      var html = btns[i].innerHTML;
+      btns[i].textContent = msg;
+      setTimeout(function(b, h){ b.innerHTML = h; }.bind(null, btns[i], html), 1800);
+      break;
+    }
+  }
+}
+
+function importWorkspaceFromURL() {
+  try {
+    var params = new URLSearchParams(window.location.search);
+    var encoded = params.get('ws');
+    if (!encoded) return false;
+    var payload = JSON.parse(_b64uDecode(encoded));
+    if (!payload || !Array.isArray(payload.repos)) return false;
+
+    // Create a new workspace from the shared payload
+    var id   = 'ws_' + Date.now();
+    var name = (payload.name || 'Shared') + ' (imported)';
+    var ws   = {
+      id: id, name: name, createdAt: Date.now(),
+      repos: payload.repos.map(function(r){ return _makeRepoEntry(r.name, r); })
+    };
+    var idx = loadWorkspaceIndex();
+    idx.push({ id: id, name: ws.name, createdAt: ws.createdAt });
+    saveWorkspaceIndex(idx);
+    saveWorkspace(ws);
+    setActiveWorkspaceId(id);
+    // Clean the URL so refresh doesn't re-import
+    if (window.history && window.history.replaceState) {
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+    return ws;
+  } catch(e) { return false; }
+}
+
+// ── LocalStorage: load / save ─────────────────────────────────────────────────
+function loadState() {
+  try {
+    // Check for shared workspace in URL first
+    var importedWs = importWorkspaceFromURL();
+    var ws = importedWs || getOrCreateDefaultWorkspace();
+    token  = localStorage.getItem('grasp_saved_token') || localStorage.getItem('grasp_dashboard_token') || '';
+    document.getElementById('token-input').value = token;
+    // Sync workspace label (the DOM element exists by the time JS runs)
+    var wsLabel = document.getElementById('ws-name-label');
+    if (wsLabel) wsLabel.textContent = ws.name;
+    ws.repos.forEach(function(entry){ addRepoByName(entry.name, entry); });
+  } catch(e) {}
+  checkForUpdates();
+}
+
+// ── Auth management ───────────────────────────────────────────────────────────
+var authMode    = 'none';   // 'none' | 'pat' | 'github_app' | 'gitlab' | 'ghe' | 'bitbucket' | 'azure' | 'gitea'
+var token       = '';
+var appId       = '';
+var privateKey  = '';       // session-only
+var gitlabToken = '';
+var gitlabHost  = '';
+var bbUsername  = '';
+var bbPassword  = '';
+var azurePat    = '';
+var giteaToken  = '';
+var giteaHost   = '';
+var gheToken    = '';
+var gheHost     = '';
+
+function initAuth() {
+  try { authMode    = localStorage.getItem('grasp_saved_auth_method')  || 'none'; } catch(e) {}
+  try { token       = localStorage.getItem('grasp_saved_token')        || ''; } catch(e) {}
+  try { appId       = localStorage.getItem('grasp_saved_app_id')       || ''; } catch(e) {}
+  try { privateKey  = sessionStorage.getItem('grasp_saved_private_key') || ''; } catch(e) {}
+  try { gitlabToken = localStorage.getItem('grasp_gitlab_token')       || ''; } catch(e) {}
+  try { gitlabHost  = localStorage.getItem('grasp_gitlab_host')        || ''; } catch(e) {}
+  try { bbUsername  = localStorage.getItem('grasp_bb_username')        || ''; } catch(e) {}
+  try { bbPassword  = localStorage.getItem('grasp_bb_password')        || ''; } catch(e) {}
+  try { azurePat    = localStorage.getItem('grasp_azure_pat')          || ''; } catch(e) {}
+  try { giteaToken  = localStorage.getItem('grasp_gitea_token')        || ''; } catch(e) {}
+  try { giteaHost   = localStorage.getItem('grasp_gitea_host')         || ''; } catch(e) {}
+  try { gheToken    = localStorage.getItem('grasp_ghe_token')          || ''; } catch(e) {}
+  try { gheHost     = localStorage.getItem('grasp_ghe_host')           || ''; } catch(e) {}
+
+  var sel = document.getElementById('auth-mode');
+  if (sel) sel.value = authMode;
+  var _f = function(id, v) { var el = document.getElementById(id); if (el) el.value = v; };
+  _f('token-input', token);
+  _f('app-id-input', appId);
+  _f('gitlab-token-input', gitlabToken);
+  _f('gitlab-host-input', gitlabHost);
+  _f('bb-username-input', bbUsername);
+  _f('bb-password-input', bbPassword);
+  _f('azure-pat-input', azurePat);
+  _f('gitea-token-input', giteaToken);
+  _f('gitea-host-input', giteaHost);
+  _f('ghe-token-input', gheToken);
+  _f('ghe-host-input', gheHost);
+  onAuthModeChange(authMode, true);
+}
+
+function onAuthModeChange(mode, silent) {
+  authMode = mode;
+  var fields = {
+    'pat':       'auth-pat-fields',
+    'github_app':'auth-app-fields',
+    'gitlab':    'auth-gitlab-fields',
+    'ghe':       'auth-ghe-fields',
+    'bitbucket': 'auth-bb-fields',
+    'azure':     'auth-azure-fields',
+    'gitea':     'auth-gitea-fields'
+  };
+  Object.keys(fields).forEach(function(k) {
+    var el = document.getElementById(fields[k]);
+    if (el) el.style.display = (mode === k) ? 'flex' : 'none';
+  });
+  var desc = document.getElementById('auth-desc');
+  if (desc) {
+    var msgs = {
+      'none':       '60 req/hr · public repos only',
+      'pat':        '5,000 req/hr · private repos · shared with Grasp',
+      'github_app': 'Highest limits · installation token per repo',
+      'gitlab':     'GitLab API · 2,000 req/hr · private repos supported',
+      'ghe':        'GitHub Enterprise API · private repos supported',
+      'bitbucket':  'Bitbucket API · credentials shared with Grasp',
+      'azure':      'Azure DevOps · credentials shared with Grasp',
+      'gitea':      'Gitea API · credentials shared with Grasp'
+    };
+    desc.textContent = msgs[mode] || '';
+  }
+  if (!silent) {
+    try {
+      if (mode !== 'none') localStorage.setItem('grasp_saved_auth_method', mode);
+      else localStorage.removeItem('grasp_saved_auth_method');
+    } catch(e) {}
+  }
+  updateKeyBtn();
+}
+
+function saveToken(v) {
+  token = v;
+  try {
+    if (v) { localStorage.setItem('grasp_saved_token', v); localStorage.setItem('grasp_dashboard_token', v); }
+    else   { localStorage.removeItem('grasp_saved_token'); localStorage.removeItem('grasp_dashboard_token'); }
+  } catch(e) {}
+}
+
+function clearToken() {
+  token = '';
+  var ti = document.getElementById('token-input');
+  if (ti) ti.value = '';
+  saveToken('');
+}
+
+function saveAppId(v) {
+  appId = v;
+  try {
+    if (v) localStorage.setItem('grasp_saved_app_id', v);
+    else   localStorage.removeItem('grasp_saved_app_id');
+  } catch(e) {}
+}
+
+function saveGitlabToken(v) {
+  gitlabToken = v;
+  try { if (v) localStorage.setItem('grasp_gitlab_token', v); else localStorage.removeItem('grasp_gitlab_token'); } catch(e) {}
+}
+function saveGitlabHost(v) {
+  gitlabHost = v;
+  try { if (v) localStorage.setItem('grasp_gitlab_host', v); else localStorage.removeItem('grasp_gitlab_host'); } catch(e) {}
+}
+function saveBbUsername(v) {
+  bbUsername = v;
+  try { if (v) localStorage.setItem('grasp_bb_username', v); else localStorage.removeItem('grasp_bb_username'); } catch(e) {}
+}
+function saveBbPassword(v) {
+  bbPassword = v;
+  try { if (v) localStorage.setItem('grasp_bb_password', v); else localStorage.removeItem('grasp_bb_password'); } catch(e) {}
+}
+function saveAzurePat(v) {
+  azurePat = v;
+  try { if (v) localStorage.setItem('grasp_azure_pat', v); else localStorage.removeItem('grasp_azure_pat'); } catch(e) {}
+}
+function saveGiteaToken(v) {
+  giteaToken = v;
+  try { if (v) localStorage.setItem('grasp_gitea_token', v); else localStorage.removeItem('grasp_gitea_token'); } catch(e) {}
+}
+function saveGiteaHost(v) {
+  giteaHost = v;
+  try { if (v) localStorage.setItem('grasp_gitea_host', v); else localStorage.removeItem('grasp_gitea_host'); } catch(e) {}
+}
+function saveGheToken(v) {
+  gheToken = v;
+  try { if (v) localStorage.setItem('grasp_ghe_token', v); else localStorage.removeItem('grasp_ghe_token'); } catch(e) {}
+}
+function saveGheHost(v) {
+  gheHost = v;
+  try { if (v) localStorage.setItem('grasp_ghe_host', v); else localStorage.removeItem('grasp_ghe_host'); } catch(e) {}
+}
+
+function openKeyModal() {
+  var ta = document.getElementById('key-textarea');
+  if (ta) ta.value = privateKey || '';
+  document.getElementById('key-modal-overlay').style.display = 'flex';
+}
+
+function closeKeyModal(e) {
+  if (e && e.target !== document.getElementById('key-modal-overlay')) return;
+  document.getElementById('key-modal-overlay').style.display = 'none';
+}
+
+function savePrivateKey() {
+  var ta = document.getElementById('key-textarea');
+  privateKey = ta ? ta.value.trim() : '';
+  try { if (privateKey) sessionStorage.setItem('grasp_saved_private_key', privateKey); else sessionStorage.removeItem('grasp_saved_private_key'); } catch(e) {}
+  document.getElementById('key-modal-overlay').style.display = 'none';
+  updateKeyBtn();
+}
+
+function updateKeyBtn() {
+  var btn = document.getElementById('key-btn');
+  var lbl = document.getElementById('key-btn-text');
+  if (!btn || !lbl) return;
+  if (privateKey) { lbl.textContent = 'Key set ✓'; btn.classList.add('set'); }
+  else            { lbl.textContent = 'Private key'; btn.classList.remove('set'); }
+}
+
+function buildHeaders(repoKey) {
+  // repoKey is 'owner/repo' or 'host/owner/repo' — used to detect provider
+  var host = (repoKey || '').split('/')[0];
+  var isGitLab = authMode === 'gitlab' || (repoKey && /gitlab/i.test(host));
+  var isGHE    = authMode === 'ghe'    || (repoKey && host && host !== 'github.com' && host !== 'gitlab.com' && gheHost && host === gheHost);
+
+  if (isGitLab) {
+    var h = { Accept: 'application/json' };
+    var tok = gitlabToken || localStorage.getItem('grasp_gitlab_token') || '';
+    if (tok) h['PRIVATE-TOKEN'] = tok;
+    return h;
+  }
+  var h = { Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' };
+  if (isGHE && gheToken) {
+    h['Authorization'] = 'token ' + gheToken;
+  } else if (authMode === 'pat' && token) {
+    h['Authorization'] = 'token ' + token;
+  }
+  // GitHub App: installation token is fetched per-repo inside analyzeRepo when needed
+  return h;
+}
+
+function buildApiBase(repoKey) {
+  // Returns the base REST API URL for the repo's host
+  var host = (repoKey || '').split('/')[0];
+  var isGitLab = authMode === 'gitlab' || (repoKey && /gitlab/i.test(host));
+  var isGHE    = authMode === 'ghe';
+  if (isGitLab) {
+    var gl = gitlabHost || localStorage.getItem('grasp_gitlab_host') || '';
+    return 'https://' + (gl || 'gitlab.com') + '/api/v4';
+  }
+  if (isGHE && gheHost) return 'https://' + gheHost + '/api/v3';
+  return 'https://api.github.com';
+}
+
+// ── Grasp API ─────────────────────────────────────────────────────────────────
+function normalizeRepo(input) {
+  var m = input.match(/github\.com\/([^/]+\/[^/?\s]+)/);
+  if (m) return m[1].replace(/\.git$/, '');
+  var parts = input.trim().replace(/^https?:\/\//, '').split('/');
+  if (parts.length >= 2) return parts[0] + '/' + parts[1].replace(/\.git$/, '');
+  return null;
+}
+
+async function analyzeRepo(repoName) {
+  var [owner, repo] = repoName.split('/');
+
+  // ── 1. Check for fresh Grasp deep-analysis snapshot ───────────────────────
+  // Grasp (index.html) writes to grasp_snapshots on every analysis.
+  // Snapshot shape: { repo, timestamp, health, stats:{files,functions,loc}, issueCount, circularCount, securityCount }
+  var graspSnap = null;
+  try {
+    var allSnaps = JSON.parse(localStorage.getItem('grasp_snapshots') || '[]');
+    var repoSnaps = allSnaps.filter(function(s){ return s.repo === repoName; });
+    if (repoSnaps.length > 0) {
+      repoSnaps.sort(function(a,b){ return new Date(b.timestamp) - new Date(a.timestamp); });
+      var latest = repoSnaps[0];
+      // Accept if < 7 days old
+      if (Date.now() - new Date(latest.timestamp).getTime() < 7 * 86400000) graspSnap = latest;
+    }
+  } catch(e) {}
+
+  // ── 2. If Grasp snapshot exists, return immediately (no API needed) ─────────
+  var headers = buildHeaders(repoName);
+  var apiBase = buildApiBase(repoName);
+
+  if (graspSnap) {
+    var gs = graspSnap;
+    var sc = gs.health || 0;
+    // Try to enrich with live GitHub metadata — non-fatal if rate-limited
+    var stars = 0, lang = 'Mixed', branch = 'main', openIssues = gs.issueCount || 0;
+    try {
+      var metaRes = await fetch(apiBase + '/repos/' + owner + '/' + repo, { headers });
+      if (metaRes.ok) {
+        var metaData = await metaRes.json();
+        stars = metaData.stargazers_count || 0;
+        lang  = metaData.language || 'Mixed';
+        branch = metaData.default_branch || 'main';
+        openIssues = metaData.open_issues_count || gs.issueCount || 0;
+      }
+    } catch(e) {}
+    return {
+      name: repoName, fullName: owner + '/' + repo, defaultBranch: branch,
+      language: lang, stars: stars,
+      fileCount: gs.stats ? gs.stats.files || 0 : 0,
+      codeFileCount: gs.stats ? gs.stats.files || 0 : 0,
+      layers: [],
+      score: sc,
+      grade: sc >= 90 ? 'A' : sc >= 80 ? 'B' : sc >= 70 ? 'C' : sc >= 60 ? 'D' : 'F',
+      issueCount:    gs.issueCount    || 0,
+      circularCount: gs.circularCount || 0,
+      securityCount: gs.securityCount || 0,
+      functionCount: gs.stats ? gs.stats.functions || 0 : 0,
+      loc:           gs.stats ? gs.stats.loc || 0 : 0,
+      openIssues:    openIssues,
+      patternCount:  gs.patternCount != null ? gs.patternCount : null,
+      envIssues:     gs.envIssues != null ? gs.envIssues : null,
+      featureFlags:  gs.featureFlags != null ? gs.featureFlags : null,
+      analyzedByGrasp: true,
+      graspAt: gs.timestamp,
+    };
+  }
+
+  // ── 3. No snapshot — fetch from API ──────────────────────────────────────
+  var repoRes = await fetch(apiBase + '/repos/' + owner + '/' + repo, { headers });
+  if (!repoRes.ok) {
+    var remaining = repoRes.headers.get('x-ratelimit-remaining');
+    if (repoRes.status === 403 && remaining === '0') throw new Error('Rate limit reached — add a token for higher limits');
+    if (repoRes.status === 404) throw new Error('Repo not found or private (add token for private repos)');
+    throw new Error('API error ' + repoRes.status);
+  }
+  var repoData = await repoRes.json();
+  var branch = repoData.default_branch || 'main';
+  var lang = repoData.language || 'Mixed';
+
+  // ── 4. Fallback: file tree + raw content analysis ────────────────────────
+  var treeRes = await fetch(apiBase + '/repos/' + owner + '/' + repo + '/git/trees/' + branch + '?recursive=1', { headers });
+  if (!treeRes.ok) throw new Error('Could not fetch file tree');
+  var treeData = await treeRes.json();
+  var files = (treeData.tree || []).filter(function(f){ return f.type === 'blob'; });
+
+  var CODE_EXT = new Set(['.ts','.tsx','.js','.jsx','.mjs','.cjs','.py','.rb','.java','.go','.rs','.cs','.cpp','.c','.php','.swift','.kt']);
+  var codeFiles = files.filter(function(f){
+    var ext = '.' + f.path.split('.').pop();
+    return CODE_EXT.has(ext) && !f.path.includes('node_modules') && !f.path.includes('.min.');
+  });
+
+  // Layers from folder structure
+  var LAYER_KW = ['ui','components','views','pages','screens','services','api','controllers','routes','utils','helpers','lib','data','models','store','config','test','tests','__tests__'];
+  var folderSet = new Set(codeFiles.map(function(f){ return f.path.split('/')[0]; }));
+  var layers = Array.from(folderSet).filter(function(f){ return LAYER_KW.some(function(k){ return f.toLowerCase().includes(k); }); });
+
+  var fileCount  = codeFiles.length;
+  var totalFiles = files.length;
+  var testFiles  = codeFiles.filter(function(f){ return /test|spec|__test/.test(f.path); }).length;
+  var testRatio  = fileCount > 0 ? testFiles / fileCount : 0;
+
+  // Security risk scan from file tree (no extra API calls)
+  var SEC_NAMES = ['.env','.env.local','.env.production','.env.development','id_rsa','id_ed25519','.htpasswd'];
+  var SEC_EXTS  = ['.pem','.p12','.pfx','.key','.jks','.keystore'];
+  var SEC_WORDS = ['credential','secret','password','token','auth.json','config/secrets'];
+  var securityCount = files.filter(function(f){
+    var name = f.path.split('/').pop().toLowerCase();
+    var path = f.path.toLowerCase();
+    return SEC_NAMES.includes(name) ||
+           SEC_EXTS.some(function(e){ return name.endsWith(e); }) ||
+           SEC_WORDS.some(function(w){ return path.includes(w); });
+  }).length;
+
+  // Dependency count from package.json (raw CDN — no rate limit impact)
+  var depCount = 0;
+  var hasPkgJson = files.some(function(f){ return f.path === 'package.json'; });
+  if (hasPkgJson) {
+    try {
+      var pkgRes = await fetch('https://raw.githubusercontent.com/' + owner + '/' + repo + '/' + branch + '/package.json');
+      if (pkgRes.ok) {
+        var pkg = await pkgRes.json();
+        depCount = Object.keys(pkg.dependencies || {}).length + Object.keys(pkg.devDependencies || {}).length;
+      }
+    } catch(e) {}
+  }
+
+  // Function count + feature flag sample: fetch 4 non-test source files via raw CDN
+  var FN_RE = /\bfunction\s+\w+|\bdef\s+\w+|\bfunc\s+\w+|\b(?:async\s+)?\w+\s*[:=]\s*(?:async\s*)?\([^)]{0,120}\)\s*(?:=>|\{)/g;
+  var FF_RE = /(?:isEnabled|getFlag|getFeature|LaunchDarkly|useFlag)\s*\(/g;
+  var ENV_RE = /process\.env\.\w+\s*(?!=)/g;
+  var sampleSrc = codeFiles.filter(function(f){ return !/test|spec|__test/.test(f.path); }).slice(0, 4);
+  var sampledFns = 0, sampledFiles = 0, sampledFlags = 0, sampledEnvHits = 0;
+  for (var si = 0; si < sampleSrc.length; si++) {
+    try {
+      var cr = await fetch('https://raw.githubusercontent.com/' + owner + '/' + repo + '/' + branch + '/' + sampleSrc[si].path);
+      if (cr.ok) {
+        var ct = await cr.text();
+        if (ct.length < 80000) {
+          sampledFns += (ct.match(FN_RE) || []).length;
+          sampledFlags += (ct.match(FF_RE) || []).length;
+          sampledEnvHits += (ct.match(ENV_RE) || []).length;
+          sampledFiles++;
+        }
+      }
+    } catch(e) {}
+  }
+  var functionCount = sampledFiles > 0 ? Math.round(sampledFns / sampledFiles * fileCount) : 0;
+  // Extrapolate feature flags and env-var usage across all code files from the sample
+  var featureFlags = sampledFiles > 0 ? Math.round(sampledFlags / sampledFiles * fileCount) : 0;
+  // Env issues: .env files committed + extrapolated inline process.env usage without defaults
+  var envFileCount = files.filter(function(f){ var n=f.path.split('/').pop(); return /^\.env(\.|$)/.test(n); }).length;
+  var envIssues = envFileCount + (sampledFiles > 0 ? Math.round(sampledEnvHits / sampledFiles * fileCount) : 0);
+
+  // Health score
+  var score = 80;
+  if (testRatio < 0.05) score -= 10;
+  else if (testRatio > 0.2) score += 5;
+  if (fileCount > 500) score -= 5;
+  if (fileCount > 1000) score -= 5;
+  if (layers.length >= 3) score += 5;
+  if (securityCount > 0) score -= 15;
+  if (depCount > 100) score -= 5;
+  score = Math.max(20, Math.min(100, score));
+  var grade = score >= 90 ? 'A' : score >= 80 ? 'B' : score >= 70 ? 'C' : score >= 60 ? 'D' : 'F';
+
+  return {
+    name: repoName, fullName: owner + '/' + repo, defaultBranch: branch,
+    language: lang, stars: repoData.stargazers_count || 0,
+    openIssues: repoData.open_issues_count || 0,
+    fileCount: totalFiles, codeFileCount: fileCount, testFileCount: testFiles,
+    layers: layers, score: score, grade: grade,
+    issueCount:    repoData.open_issues_count || 0,  // real GitHub open issues
+    circularCount: 0,   // requires full Grasp analysis
+    securityCount: securityCount,
+    functionCount: functionCount,
+    depCount:      depCount,
+    loc:           0,
+    patternCount:  null,  // requires full Grasp analysis
+    envIssues:     envIssues,
+    featureFlags:  featureFlags,
+    analyzedByGrasp: false,
+  };
+}
+
+// ── Commit activity ───────────────────────────────────────────────────────────
+async function fetchCommitActivity(repoName, graspAt) {
+  var parts = repoName.split('/');
+  var owner = parts[0], repo = parts[1];
+  var headers = buildHeaders(repoName);
+  var apiBase = buildApiBase(repoName);
+  var since30d = new Date(Date.now() - 30 * 86400000).toISOString();
+  try {
+    var res = await fetch(
+      apiBase + '/repos/' + owner + '/' + repo +
+      '/commits?since=' + since30d + '&per_page=100',
+      { headers }
+    );
+    if (!res.ok) return null;
+    var commits = await res.json();
+    if (!Array.isArray(commits) || commits.length === 0) return { commits7d: 0, commits30d: 0, commitsSinceAnalysis: 0, lastCommit: null };
+    var now = Date.now();
+    var since7d = now - 7 * 86400000;
+    var graspTime = graspAt ? new Date(graspAt).getTime() : 0;
+    var c7d = 0, c30d = commits.length, cSince = 0;
+    commits.forEach(function(c) {
+      var t = new Date(c.commit.author.date).getTime();
+      if (t > since7d) c7d++;
+      if (graspTime && t > graspTime) cSince++;
+    });
+    var last = commits[0].commit;
+    var lastCommit = {
+      message: last.message.split('\n')[0].slice(0, 55),
+      author:  last.author.name,
+      date:    last.author.date
+    };
+    // Also fetch CI status (non-fatal)
+    var ci = null;
+    try {
+      var ciRes = await fetch(apiBase + '/repos/' + owner + '/' + repo + '/actions/runs?per_page=1', { headers });
+      if (ciRes.ok) {
+        var ciData = await ciRes.json();
+        if (ciData.workflow_runs && ciData.workflow_runs[0]) {
+          var run = ciData.workflow_runs[0];
+          ci = { conclusion: run.conclusion || run.status, name: run.name };
+        }
+      }
+    } catch(e) {}
+    return { commits7d: c7d, commits30d: c30d, commitsSinceAnalysis: cSince, lastCommit: lastCommit, ciStatus: ci };
+  } catch(e) { return null; }
+}
+
+// ── Repo management ───────────────────────────────────────────────────────────
+function addRepo() {
+  var input = document.getElementById('repo-input');
+  var name = normalizeRepo(input.value.trim());
+  if (!name) { alert('Enter a valid repo in "owner/repo" format'); return; }
+  input.value = '';
+  addRepoByName(name);
+}
+
+function showToast(msg, type) {
+  var el = document.getElementById('grasp-toast');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'grasp-toast';
+    el.style.cssText = 'position:fixed;bottom:50px;left:50%;transform:translateX(-50%);z-index:9999;padding:9px 18px;border-radius:8px;font-size:11px;font-family:var(--font);font-weight:600;pointer-events:none;transition:opacity .3s;white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,.5)';
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.style.background = type === 'error' ? 'rgba(255,95,95,.9)' : 'rgba(34,197,94,.9)';
+  el.style.color = '#000';
+  el.style.opacity = '1';
+  clearTimeout(el._t);
+  el._t = setTimeout(function(){ el.style.opacity = '0'; }, 3000);
+}
+
+async function openLocalFolder() {
+  if (!window.showDirectoryPicker) {
+    showToast('Your browser doesn\'t support the File System Access API. Use Chrome or Edge.', 'error');
+    return;
+  }
+  var dirHandle;
+  try { dirHandle = await window.showDirectoryPicker({ mode: 'read' }); }
+  catch(e) { return; } // user cancelled
+
+  var folderName = dirHandle.name;
+  var localKey = 'local/' + folderName;
+
+  // Check if Grasp already analysed this folder (snapshot in localStorage)
+  try {
+    var snaps = JSON.parse(localStorage.getItem('grasp_snapshots') || '[]');
+    var snap = snaps.find(function(s) { return s.repo === localKey || s.repo === folderName; });
+    if (snap) {
+      addRepoByName(snap.repo);
+      showToast('Loaded local folder from Grasp snapshot ✓');
+      return;
+    }
+  } catch(e) {}
+
+  // Count files and detect language for basic entry
+  var fileCount = 0, extCounts = {};
+  async function scanDir(handle, depth) {
+    if (depth > 4) return;
+    for await (var entry of handle.values()) {
+      if (entry.kind === 'file') {
+        var ext = entry.name.split('.').pop().toLowerCase();
+        if (['js','ts','jsx','tsx','py','go','rs','java','rb','php','cs','cpp','c','swift','kt'].includes(ext)) {
+          fileCount++;
+          extCounts[ext] = (extCounts[ext] || 0) + 1;
+        }
+      } else if (entry.kind === 'directory' && !['node_modules','.git','dist','build','.next'].includes(entry.name)) {
+        await scanDir(await handle.getDirectoryHandle(entry.name), depth + 1);
+      }
+    }
+  }
+  try { await scanDir(dirHandle, 0); } catch(e) {}
+
+  var topExt = Object.entries(extCounts).sort(function(a,b){return b[1]-a[1];})[0];
+  var extToLang = {js:'JavaScript',ts:'TypeScript',jsx:'JavaScript',tsx:'TypeScript',py:'Python',go:'Go',rs:'Rust',java:'Java',rb:'Ruby',php:'PHP',cs:'C#',cpp:'C++',c:'C',swift:'Swift',kt:'Kotlin'};
+  var lang = topExt ? (extToLang[topExt[0]] || topExt[0]) : 'Unknown';
+
+  // Create a synthetic local repo entry
+  var id = Date.now() + Math.random();
+  var row = {
+    id: id, name: localKey, status: 'ok',
+    owner: '', statusTag: '', notes: '', notesUpdatedAt: null, alertThreshold: null,
+    scoreHistory: [], commitHistory: [],
+    data: {
+      fullName: localKey, score: 0, grade: '?', health: 0,
+      codeFileCount: fileCount, functionCount: null, issueCount: 0,
+      circularCount: 0, securityCount: 0, layers: [lang],
+      language: lang, stars: null, analyzedByGrasp: false,
+      commitActivity: false,
+    }
+  };
+  repos.push(row);
+  saveState();
+  render();
+  showToast('📁 ' + folderName + ' added (' + fileCount + ' source files). Analyse in Grasp for full depth.');
+}
+
+function addRepoByName(name, teamEntry) {
+  if (repos.some(function(r){ return r.name === name; })) return;
+  var id  = Date.now() + Math.random();
+  var row = {
+    id: id, name: name, status: 'loading', data: null, error: null,
+    owner:          (teamEntry && teamEntry.owner)          || '',
+    statusTag:      (teamEntry && teamEntry.statusTag)      || '',
+    notes:          (teamEntry && teamEntry.notes)          || '',
+    notesUpdatedAt: (teamEntry && teamEntry.notesUpdatedAt) || null,
+    alertThreshold: (teamEntry && teamEntry.alertThreshold) || null,
+    scoreHistory:   (teamEntry && teamEntry.scoreHistory)   || [],
+    commitHistory:  (teamEntry && teamEntry.commitHistory)  || [],
+    saasTrend:      null
+  };
+  repos.push(row);
+  saveState();
+  render();
+  analyzeRepo(name).then(function(data) {
+    row.data   = data;
+    row.status = 'ok';
+    row.data.commitActivity = null; // will be populated below
+    pushScoreHistory(name, data.score);
+    render();
+    // Background: fetch SaaS score history (non-blocking)
+    fetchHistory(name).then(function(saasHistory) {
+      row.saasTrend = saasHistory;
+      render();
+    });
+    // Background: fetch commit activity (non-blocking), with cache fallback
+    var caCacheKey = 'grasp_ca_' + name.replace('/', '_');
+    try {
+      var cachedCa = JSON.parse(localStorage.getItem(caCacheKey) || 'null');
+      if (cachedCa && row.data) { row.data.commitActivity = cachedCa; render(); }
+    } catch(e) {}
+    // Timeout: after 12s show — if still null
+    var caTimeout = setTimeout(function() {
+      if (row.data && row.data.commitActivity === null) {
+        row.data.commitActivity = false; // false = failed/timed out
+        render();
+      }
+    }, 12000);
+    fetchCommitActivity(name, data.graspAt).then(function(activity) {
+      clearTimeout(caTimeout);
+      if (!row.data) return;
+      if (activity) {
+        row.data.commitActivity = activity;
+        pushCommitHistory(name, activity);
+        try { localStorage.setItem(caCacheKey, JSON.stringify(activity)); } catch(e) {}
+      } else {
+        row.data.commitActivity = row.data.commitActivity || false;
+      }
+      render();
+    }).catch(function() {
+      clearTimeout(caTimeout);
+      if (row.data && row.data.commitActivity === null) row.data.commitActivity = false;
+      render();
+    });
+  }).catch(function(err) {
+    row.error  = err.message;
+    row.status = 'error';
+    saveState();
+    render();
+  });
+}
+
+function removeRepo(id) {
+  repos = repos.filter(function(r){ return r.id !== id; });
+  saveState();
+  render();
+}
+
+function clearAll() {
+  repos = [];
+  saveState();
+  render();
+}
+
+function addDefaults() {
+  ['vercel/next.js','facebook/react','microsoft/vscode'].forEach(addRepoByName);
+}
+
+// ── Rendering ─────────────────────────────────────────────────────────────────
+function gradeClass(g) { return 'grade grade-' + (g || 'F'); }
+
+function renderSparkline(history) {
+  // Returns an SVG string for a 48x16 sparkline
+  if (!history || history.length < 2) return '<span style="color:var(--t3);font-size:10px">—</span>';
+  var scores = history.map(function(h){ return h.score; });
+  var W = 48, H = 16, pad = 1;
+  var min = Math.min.apply(null, scores);
+  var max = Math.max.apply(null, scores);
+  var range = Math.max(max - min, 5); // avoid flat line
+  var pts = scores.map(function(s, i) {
+    var x = pad + (i / (scores.length - 1)) * (W - 2 * pad);
+    var y = (H - pad) - ((s - min) / range) * (H - 2 * pad);
+    return x.toFixed(1) + ',' + y.toFixed(1);
+  });
+  var last = scores[scores.length - 1];
+  var prev = scores[scores.length - 2];
+  var strokeColor = last >= prev ? '#22c55e' : '#ff5f5f';
+  return '<svg width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" style="vertical-align:middle;overflow:visible">' +
+    '<polyline points="' + pts.join(' ') + '" fill="none" stroke="' + strokeColor + '" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>' +
+    '<circle cx="' + pts[pts.length - 1].split(',')[0] + '" cy="' + pts[pts.length - 1].split(',')[1] + '" r="2" fill="' + strokeColor + '"/>' +
+    '</svg>';
+}
+
+function renderCommitSparkline(commitHistory) {
+  // Mini sparkline of commits/7d over recorded visits (up to 14 points)
+  if (!commitHistory || commitHistory.length < 2) return '';
+  var vals = commitHistory.map(function(h){ return h.c7d || 0; });
+  var W = 40, H = 12, pad = 1;
+  var max = Math.max.apply(null, vals);
+  if (max === 0) return '';
+  var pts = vals.map(function(v, i) {
+    var x = pad + (i / (vals.length - 1)) * (W - 2 * pad);
+    var y = (H - pad) - (v / max) * (H - 2 * pad);
+    return x.toFixed(1) + ',' + y.toFixed(1);
+  });
+  var last = vals[vals.length - 1];
+  var prev = vals[vals.length - 2];
+  var col = last >= prev ? '#4d9fff' : '#f59e0b';
+  return '<svg width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" style="vertical-align:middle;overflow:visible" title="Commits/7d over last ' + vals.length + ' visits">' +
+    '<polyline points="' + pts.join(' ') + '" fill="none" stroke="' + col + '" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" opacity=".8"/>' +
+    '<circle cx="' + pts[pts.length - 1].split(',')[0] + '" cy="' + pts[pts.length - 1].split(',')[1] + '" r="2" fill="' + col + '"/>' +
+    '</svg>';
+}
+
+async function fetchHistory(repo) {
+  try {
+    var parts = repo.split('/');
+    var owner = encodeURIComponent(parts[0] || '');
+    var repoName = encodeURIComponent(parts[1] || '');
+    var r = await fetch('https://api.github.com/repos/' + owner + '/' + repoName + '?days=30');
+    if (!r.ok) return [];
+    var json = await r.json();
+    return json.history; // [{ score, grade, analyzedAt }]
+  } catch (e) { return []; }
+}
+
+function renderScoreTrend(history) {
+  if (!history || history.length < 2) return '<span style="color:#475569">—</span>';
+  var scores = history.slice(0, 14).reverse().map(function(h) { return h.score; });
+  var max = 100, min = 0, w = 60, h = 20;
+  var pts = scores.map(function(s, i) {
+    var x = (i / (scores.length - 1)) * w;
+    var y = h - ((s - min) / (max - min)) * h;
+    return x + ',' + y;
+  }).join(' ');
+  var last = scores[scores.length - 1];
+  var prev = scores[scores.length - 2];
+  var color = last >= prev ? '#22c55e' : '#ef4444';
+  return '<svg width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h + '">' +
+    '<polyline points="' + pts + '" fill="none" stroke="' + color + '" stroke-width="1.5"/>' +
+    '</svg>';
+}
+
+function renderDelta(history, currentScore) {
+  if (!history || history.length < 2) return '<span style="color:var(--t3);font-size:10px">—</span>';
+  var prev  = history[history.length - 2].score;
+  var delta = currentScore - prev;
+  if (delta === 0) return '<span style="color:var(--t3);font-size:10px">±0</span>';
+  var sign  = delta > 0 ? '+' : '';
+  var color = delta > 0 ? '#22c55e' : '#ff5f5f';
+  return '<span style="color:' + color + ';font-size:10px;font-weight:700">' + sign + delta + '</span>';
+}
+
+function scoreBarColor(score) {
+  if (score >= 80) return '#22c55e';
+  if (score >= 60) return '#f59e0b';
+  return '#ff5f5f';
+}
+
+function renderLeaderboard(repos) {
+  var sorted = repos.filter(function(r){ return r.status === 'ok' && r.data && r.data.score != null; })
+    .map(function(r){ return { repo: r.data.fullName || r.name, score: r.data.score, grade: r.data.grade }; })
+    .sort(function(a, b){ return b.score - a.score; });
+  if (sorted.length < 2) return '';
+  var medals = ['🥇', '🥈', '🥉'];
+  var rows = sorted.slice(0, 10).map(function(r, i){
+    return '<div class="lb-row">' +
+      '<span class="lb-medal">' + (medals[i] !== undefined ? medals[i] : (i+1)+'.') + '</span>' +
+      '<span class="lb-repo">' + esc(r.repo) + '</span>' +
+      '<span class="lb-score" style="color:' + (r.grade==='A'?'#22c55e':r.grade==='B'?'#84cc16':'#f59e0b') + '">' + r.score + ' ' + (r.grade||'?') + '</span>' +
+      '</div>';
+  }).join('');
+  return '<div class="leaderboard"><h3>🏆 Cleanest Repos</h3>' + rows + '</div>';
+}
+
+function render() {
+  var hasData = repos.some(function(r){ return r.status === 'ok'; });
+  var hasAny = repos.length > 0;
+
+  document.getElementById('empty-state').style.display = hasAny ? 'none' : '';
+  document.getElementById('table-section').style.display = hasAny ? '' : 'none';
+  document.getElementById('charts-section').style.display = hasData ? '' : 'none';
+  document.getElementById('summary-strip').style.display = hasData ? '' : 'none';
+
+  renderTable();
+  document.getElementById('leaderboard-panel').innerHTML = renderLeaderboard(repos);
+  if (hasData) { renderSummary(); renderCharts(); }
+}
+
+function renderDoraCard(repo) {
+  var d = repo.doraData;
+  if (!d) return '<div style="padding:8px 14px;color:var(--t3);font-size:11px">No DORA data — open this repo in Grasp and run ⋯ → 📊 DORA Metrics.</div>';
+  return '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;padding:10px 14px">' +
+    ['Deploy Freq','Lead Time','Change Fail%','MTTR'].map(function(label, i) {
+      var val = [d.deployFreq, d.leadTime, d.changeFailRate, d.mttr][i];
+      var tier = [d.deployTier, d.leadTier, d.cfrTier, d.mttrTier][i] || '';
+      var color = tier === 'Elite' ? '#ffffff' : tier === 'High' ? '#4d9fff' : tier === 'Medium' ? '#f6ad55' : '#fc8181';
+      return '<div style="text-align:center">' +
+        '<div style="font-size:18px;font-weight:800;color:' + color + '">' + (val != null ? val : '—') + '</div>' +
+        '<div style="font-size:9px;color:var(--t3)">' + label + '</div>' +
+        '<div style="font-size:9px;color:' + color + '">' + tier + '</div>' +
+        '</div>';
+    }).join('') +
+    '</div>';
+}
+
+function renderTable() {
+  var tbody = document.getElementById('repo-tbody');
+  tbody.innerHTML = '';
+  repos.forEach(function(r) {
+    var tr = document.createElement('tr');
+    if (r.status === 'loading') {
+      tr.className = 'loading-row';
+      tr.innerHTML = '<td colspan="19" style="padding:10px 12px"><span style="color:var(--acc);font-size:10px;margin-right:8px;display:inline-block;animation:spin .8s linear infinite">⟳</span><span style="color:var(--t2);font-size:10px">' + esc(r.name) + '</span>&nbsp;<span class="shimmer"></span></td>';
+    } else if (r.status === 'error') {
+      tr.className = 'error-row';
+      tr.innerHTML = '<td colspan="19">✗ ' + esc(r.name) + ' — ' + esc(r.error) + '<button class="remove-btn" onclick="removeRepo(' + r.id + ')">✕</button></td>';
+    } else {
+      var d = r.data;
+      var barW = d.score + '%';
+      var rn = JSON.stringify(r.name);
+      var fnCell = d.functionCount ? '~' + d.functionCount.toLocaleString() : '—';
+      var graspBtn = '<button class="grasp-open-btn" onclick="window.open(\'index.html?repo=' + esc(d.fullName) + '\',\'_blank\')" title="Analyse in Grasp">⬡ Grasp</button>';
+
+      // ── Repo cell ──
+      var nameLine = '<div class="repo-name-line">' +
+        '<a href="https://github.com/' + esc(d.fullName) + '" target="_blank" class="repo-name-link" title="View on GitHub">↗ ' + esc(d.fullName) + '</a>' +
+        (d.analyzedByGrasp ? '<span class="grasp-badge" title="Data from full Grasp analysis">⬡ Grasp</span>' : '') +
+        '</div>';
+
+      var metaLine = '<div class="repo-meta-line">' +
+        (d.language ? '<span class="repo-lang">' + esc(d.language) + '</span><span class="repo-lang" style="opacity:.4">·</span>' : '') +
+        (d.stars ? '<span class="repo-stars">⭐' + (d.stars >= 1000 ? (d.stars/1000).toFixed(1) + 'k' : d.stars) + '</span>' : '') +
+        '</div>';
+
+      // Activity line: commit counts + stale indicator
+      var actLine = '';
+      var ca = d.commitActivity;
+      if (ca === null) {
+        actLine = '<div class="repo-activity-line"><span class="activity-loading">loading activity…</span></div>';
+      } else if (ca === false) {
+        actLine = '<div class="repo-activity-line"><span class="activity-loading">— / 7d · — / 30d</span></div>';
+      } else if (ca) {
+        var commitSpark = renderCommitSparkline(r.commitHistory);
+        var pills = '<span class="commit-pill"><span>' + ca.commits7d + '</span> / 7d</span>' +
+                    '<span class="repo-lang" style="opacity:.4">·</span>' +
+                    '<span class="commit-pill"><span>' + ca.commits30d + '</span> / 30d</span>' +
+                    (commitSpark ? '<span style="margin-left:4px;opacity:.8">' + commitSpark + '</span>' : '');
+        var staleBtn = '';
+        if (ca.commitsSinceAnalysis > 0) {
+          staleBtn = '<a href="index.html?repo=' + esc(d.fullName) + '" target="_blank" class="stale-btn" title="' + ca.commitsSinceAnalysis + ' commits since last Grasp analysis — click to re-analyse">' +
+            '↺ ' + ca.commitsSinceAnalysis + ' new' +
+            '</a>';
+        }
+        var ciBadge = '';
+        if (ca.ciStatus) {
+          var con = ca.ciStatus.conclusion;
+          var ciCls = con === 'success' ? 'pass' : con === 'failure' ? 'fail' : 'pending';
+          var ciIcon = con === 'success' ? '✅' : con === 'failure' ? '❌' : '⏳';
+          ciBadge = '<span class="ci-badge ' + ciCls + '" title="CI: ' + esc(con||'pending') + '">' + ciIcon + ' CI</span>';
+        }
+        actLine = '<div class="repo-activity-line">' + pills + (staleBtn ? staleBtn : '') + ciBadge + '</div>';
+      }
+
+      var repoCell = '<td>' + nameLine + metaLine + actLine + '</td>';
+      tr.innerHTML = [
+        repoCell,
+        '<td><span class="' + gradeClass(d.grade) + '">' + (d.grade || '?') + '</span></td>',
+        '<td style="font-weight:600;color:' + scoreBarColor(d.score) + '">' + d.score + '</td>',
+        '<td class="bar-cell"><div class="health-bar"><div class="health-bar-fill" style="width:' + barW + ';background:' + scoreBarColor(d.score) + '"></div></div></td>',
+        '<td style="white-space:nowrap">' + renderDelta(r.scoreHistory, d.score) + '&nbsp;' + renderSparkline(r.scoreHistory) + '</td>',
+        '<td style="white-space:nowrap">' + renderScoreTrend(r.saasTrend) + '</td>',
+        '<td>' + d.codeFileCount.toLocaleString() + '</td>',
+        '<td>' + fnCell + '</td>',
+        '<td>' + d.issueCount + '</td>',
+        '<td>' + d.circularCount + '</td>',
+        '<td>' + (d.securityCount > 0 ? '<span style="color:var(--red)">' + d.securityCount + '</span>' : '0') + '</td>',
+        '<td class="num-cell"><span class="badge-neutral">' + (d.patternCount != null ? d.patternCount : '—') + '</span></td>',
+        '<td class="num-cell"><span class="' + ((d.envIssues||0) > 0 ? 'badge-warn' : 'badge-ok') + '">' + (d.envIssues||0) + '</span></td>',
+        '<td class="num-cell"><span class="badge-neutral">' + (d.featureFlags != null ? d.featureFlags : '—') + '</span></td>',
+        '<td style="font-size:9px;color:var(--t3)">' + (d.layers.slice(0,3).join(', ') || '—') + '</td>',
+        (function(){var debtDays=(d.circularCount*0.5)+(d.securityCount*1)+(d.issueCount*0.1);return '<td style="font-size:10px;color:'+(debtDays>20?'#ef4444':debtDays>5?'#f59e0b':'var(--green)')+'">'+(debtDays>0?'~'+debtDays.toFixed(0)+'d':'—')+'</td>';}()),
+        '<td><input class="team-input" type="text" value="' + esc(r.owner) + '" placeholder="—" onchange="setRepoField(' + rn + ',\'owner\',this.value)" title="Assign owner"></td>',
+        '<td><button class="status-tag status-' + (r.statusTag || 'none') + '" onclick="cycleStatus(' + rn + ')" title="Click to cycle status">' + (r.statusTag || '+') + '</button></td>',
+        '<td><input class="notes-input" type="text" value="' + esc(r.notes) + '" placeholder="Add note…" onchange="setRepoField(' + rn + ',\'notes\',this.value)" title="Notes"></td>',
+        '<td style="white-space:nowrap">' + graspBtn + ' <button class="remove-btn" onclick="removeRepo(' + r.id + ')" title="Remove">✕</button></td>',
+      ].join('');
+    }
+    tbody.appendChild(tr);
+    // Detail (DORA) row — appended for every non-loading/error row
+    if (r.status === 'ok') {
+      var detailTr = document.createElement('tr');
+      detailTr.className = 'detail-row';
+      detailTr.id = 'detail-' + r.id;
+      detailTr.style.display = 'none';
+      detailTr.innerHTML = '<td colspan="19" style="background:var(--bg1);padding:0">' + renderDoraCard(r) + '</td>';
+      tbody.appendChild(detailTr);
+      // Click on data row toggles detail row; ignore clicks on interactive children
+      tr.addEventListener('click', function(e) {
+        if (e.target.closest('input,button,a')) return;
+        var dt = document.getElementById('detail-' + r.id);
+        if (dt) dt.style.display = dt.style.display === 'none' ? 'table-row' : 'none';
+      });
+    }
+  });
+}
+
+function renderSummary() {
+  var okRepos = repos.filter(function(r){ return r.status === 'ok'; });
+  var avgScore = okRepos.length ? Math.round(okRepos.reduce(function(s,r){ return s+r.data.score; }, 0) / okRepos.length) : 0;
+  var totalFiles = okRepos.reduce(function(s,r){ return s+r.data.codeFileCount; }, 0);
+  var totalIssues = okRepos.reduce(function(s,r){ return s+r.data.issueCount; }, 0);
+  var totalSec = okRepos.reduce(function(s,r){ return s+r.data.securityCount; }, 0);
+  var avgGrade = avgScore >= 90 ? 'A' : avgScore >= 80 ? 'B' : avgScore >= 70 ? 'C' : avgScore >= 60 ? 'D' : 'F';
+  var gradeColor = avgScore >= 80 ? '#22c55e' : avgScore >= 60 ? '#f59e0b' : '#ff5f5f';
+
+  var items = [
+    { value: okRepos.length + '/' + repos.length, label: 'Repos', color: '' },
+    { value: avgScore + '/100', label: 'Avg Health Score', color: gradeColor },
+    { value: avgGrade, label: 'Avg Grade', color: gradeColor },
+    { value: totalFiles.toLocaleString(), label: 'Total Code Files', color: '' },
+    { value: totalIssues, label: 'Total Issues', color: totalIssues > 0 ? '#f59e0b' : '#22c55e' },
+    { value: totalSec, label: 'Security Issues', color: totalSec > 0 ? '#ff5f5f' : '#22c55e' },
+  ];
+
+  var strip = document.getElementById('summary-strip');
+  strip.innerHTML = items.map(function(item, i) {
+    return '<div class="summary-card" style="animation-delay:' + (i * 0.07) + 's"><div class="value" data-val="' + item.value + '" style="color:' + (item.color||'var(--t1)') + '">' + item.value + '</div><div class="label">' + item.label + '</div></div>';
+  }).join('');
+  // Count-up animation on numeric values
+  strip.querySelectorAll('.value').forEach(function(el) {
+    var raw = el.getAttribute('data-val') || '';
+    var num = parseInt(raw.replace(/[^0-9]/g,''),10);
+    if (isNaN(num) || raw.indexOf('/') !== -1 || raw.length <= 1) return; // skip ratios and grades
+    var dur = 600, start = Date.now();
+    el.textContent = '0';
+    (function tick(){
+      var p = Math.min(1,(Date.now()-start)/dur);
+      var ease = 1-Math.pow(1-p,3);
+      el.textContent = Math.round(num*ease).toLocaleString();
+      if(p<1) requestAnimationFrame(tick);
+      else el.textContent = raw;
+    })();
+  });
+}
+
+function renderCharts() {
+  var okRepos = repos.filter(function(r){ return r.status === 'ok'; });
+
+  // Score bar chart
+  var scoreChart = document.getElementById('score-chart');
+  scoreChart.innerHTML = okRepos.map(function(r) {
+    var d = r.data;
+    var color = scoreBarColor(d.score);
+    return '<div class="score-bar-row">' +
+      '<div class="score-bar-label" title="' + esc(d.fullName) + '">' + esc(d.name.split('/')[1] || d.name) + '</div>' +
+      '<div class="score-bar-track"><div class="score-bar-fill" style="width:' + d.score + '%;background:' + color + '"></div></div>' +
+      '<div class="score-bar-num" style="color:' + color + '">' + d.score + '</div>' +
+      '</div>';
+  }).join('');
+
+  // Issue distribution
+  var issueChart = document.getElementById('issue-chart');
+  var issueCounts = {};
+  okRepos.forEach(function(r) {
+    var name = r.data.name.split('/')[1] || r.data.name;
+    issueCounts[name] = { issues: r.data.issueCount, sec: r.data.securityCount, circ: r.data.circularCount };
+  });
+  var maxIssues = Math.max(1, ...okRepos.map(function(r){ return r.data.issueCount + r.data.securityCount + r.data.circularCount; }));
+  issueChart.innerHTML = okRepos.map(function(r, i) {
+    var d = r.data;
+    var name = d.name.split('/')[1] || d.name;
+    var total = d.issueCount + d.securityCount + d.circularCount;
+    var COLORS = ['#4d9fff','#a78bfa','#22d3ee','#00ff9d','#ff9f43'];
+    return '<div class="issue-row">' +
+      '<div class="issue-dot" style="background:' + (COLORS[i % COLORS.length]) + '"></div>' +
+      '<div class="issue-name">' + esc(name) + '</div>' +
+      '<div class="issue-count">' + total + ' issues</div>' +
+      '</div>';
+  }).join('');
+}
+
+// ── Utils ─────────────────────────────────────────────────────────────────────
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function exportCSV() {
+  var okRepos = repos.filter(function(r){ return r.status === 'ok'; });
+  if (!okRepos.length) { alert('No data to export'); return; }
+  var header = ['Repository','Language','Stars','Score','Grade','Code Files','Functions','Issues','Circular','Security','Patterns','Env Issues','Feature Flags','Grasp Analysis','Layers','Owner','Status','Notes'];
+  var rows = okRepos.map(function(r) {
+    var d = r.data;
+    return [d.fullName, d.language, d.stars, d.score, d.grade, d.codeFileCount, d.functionCount || '', d.issueCount, d.circularCount, d.securityCount, d.patternCount != null ? d.patternCount : '', d.envIssues != null ? d.envIssues : '', d.featureFlags != null ? d.featureFlags : '', d.analyzedByGrasp ? 'yes' : 'no', d.layers.join(' '), r.owner || '', r.statusTag || '', r.notes || ''];
+  });
+  var csv = [header].concat(rows).map(function(r){ return r.map(function(v){ return '"'+String(v).replace(/"/g,'""')+'"'; }).join(','); }).join('\n');
+  var blob = new Blob([csv], { type: 'text/csv' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'grasp-team-dashboard-' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+}
+
+function exportJSON() {
+  var ws = getActiveWorkspace();
+  var payload = {
+    version: GRASP_VERSION,
+    exported: new Date().toISOString(),
+    workspace: {
+      name: ws.name,
+      repos: ws.repos
+    }
+  };
+  var blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'grasp-workspace-' + ws.name.replace(/[^a-z0-9]+/gi, '-').toLowerCase() + '-' + new Date().toISOString().slice(0, 10) + '.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+function importJSON() {
+  var inp = document.createElement('input');
+  inp.type = 'file';
+  inp.accept = '.json,application/json';
+  inp.onchange = function(e) {
+    var file = e.target.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(ev) {
+      try {
+        var payload = JSON.parse(ev.target.result);
+        var wsData = (payload && payload.workspace) ? payload.workspace : payload;
+        if (!wsData || !Array.isArray(wsData.repos)) throw new Error('Missing repos array');
+        var id = 'ws_' + Date.now();
+        var name = (wsData.name || file.name.replace(/\.json$/i,'') || 'Imported') + ' (imported)';
+        var newWs = {
+          id: id, name: name, createdAt: Date.now(),
+          repos: wsData.repos.map(function(r){ return _makeRepoEntry(r.name, r); })
+        };
+        var idx = loadWorkspaceIndex();
+        idx.push({ id: id, name: newWs.name, createdAt: newWs.createdAt });
+        saveWorkspaceIndex(idx);
+        saveWorkspace(newWs);
+        switchWorkspace(id);
+        showToast('✓ Imported ' + newWs.repos.length + ' repos into "' + name + '"');
+      } catch(e) {
+        alert('Import failed: ' + e.message);
+      }
+    };
+    reader.readAsText(file);
+  };
+  document.body.appendChild(inp);
+  inp.click();
+  document.body.removeChild(inp);
+}
+
+// ── Toast notifications ───────────────────────────────────────────────────────
+var _toastTimer = null;
+function showToast(msg, duration) {
+  var el = document.getElementById('grasp-toast');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'grasp-toast';
+    el.style.cssText = 'position:fixed;bottom:50px;left:50%;transform:translateX(-50%);background:var(--bg1);border:1px solid var(--acc);border-radius:7px;padding:8px 18px;font-size:11px;font-family:var(--font);color:var(--t1);z-index:9998;box-shadow:0 4px 24px rgba(0,0,0,.6);pointer-events:none;transition:opacity .25s;max-width:420px;text-align:center;';
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.style.opacity = '1';
+  if (_toastTimer) clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(function(){ el.style.opacity = '0'; }, duration || 3000);
+}
+
+// ── Live Sync (WebSocket) ─────────────────────────────────────────────────────
+var sync = {
+  ws:           null,
+  status:       'disconnected', // 'disconnected'|'connecting'|'connected'
+  room:         '',
+  clientId:     '',
+  clientName:   '',
+  readonly:     false,
+  presence:     [],
+  _reconnTimer: null,
+  _panelOpen:   false
+};
+
+function syncGetServerUrl() {
+  // Auto-detect: same origin, replace http(s) with ws(s)
+  var proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  return proto + '//' + location.host + '/sync';
+}
+
+function syncSetStatus(s) {
+  sync.status = s;
+  var btn  = document.getElementById('sync-btn');
+  var dot  = document.getElementById('sync-dot');
+  var lbl  = document.getElementById('sync-label');
+  if (!btn) return;
+  btn.className = 'sync-btn' + (s === 'connected' ? ' connected' : s === 'connecting' ? ' connecting' : '');
+  dot.className  = 'sync-dot' + (s === 'connecting' ? ' pulse' : '');
+  lbl.textContent = s === 'connected' ? 'Live' : s === 'connecting' ? 'Connecting…' : 'Sync';
+}
+
+function syncConnect(room, name, password) {
+  if (sync.ws) { try { sync.ws.close(); } catch(e) {} sync.ws = null; }
+  sync.room     = room     || sync.room     || 'default';
+  sync.clientName = name   || sync.clientName || 'Me';
+  var password_ = password !== undefined ? password : '';
+  var url = syncGetServerUrl() +
+    '?room='     + encodeURIComponent(sync.room) +
+    '&name='     + encodeURIComponent(sync.clientName) +
+    '&readonly=' + (sync.readonly ? '1' : '0') +
+    (password_ ? '&password=' + encodeURIComponent(password_) : '');
+
+  syncSetStatus('connecting');
+  var ws = new WebSocket(url);
+  sync.ws = ws;
+
+  ws.onopen = function() {
+    syncSetStatus('connected');
+    showToast('🔄 Connected to room "' + sync.room + '"');
+    renderSyncPanel();
+  };
+
+  ws.onmessage = function(e) {
+    try {
+      var msg = JSON.parse(e.data);
+      if (msg.type === 'init') {
+        sync.clientId = msg.clientId;
+        sync.presence = msg.presence || [];
+        if (msg.workspace && !sync.readonly) {
+          _applySyncWorkspace(msg.workspace);
+        }
+        renderSyncPanel();
+      } else if (msg.type === 'workspace_update') {
+        sync.presence = (msg.presence || sync.presence);
+        _applySyncWorkspace(msg.workspace);
+        showToast('↺ Workspace updated by ' + (msg.from ? msg.from.name : 'someone'));
+        renderSyncPanel();
+      } else if (msg.type === 'presence') {
+        sync.presence = msg.presence || [];
+        renderSyncPanel();
+      } else if (msg.type === 'error' && msg.code === 'WRONG_PASSWORD') {
+        showToast('🔒 Wrong password for room "' + sync.room + '"', 5000);
+        syncDisconnect();
+      } else if (msg.type === 'pong') {
+        // heartbeat OK
+      }
+    } catch(e) {}
+  };
+
+  ws.onerror = function() {
+    syncSetStatus('disconnected');
+    renderSyncPanel();
+  };
+
+  ws.onclose = function() {
+    syncSetStatus('disconnected');
+    sync.presence = [];
+    renderSyncPanel();
+    // Auto-reconnect after 5s (unless manually disconnected)
+    if (sync._reconnecting) {
+      sync._reconnTimer = setTimeout(function() {
+        syncConnect(sync.room, sync.clientName);
+      }, 5000);
+    }
+  };
+
+  sync._reconnecting = true;
+  // Save room pref
+  try { localStorage.setItem('grasp_sync_room', sync.room); localStorage.setItem('grasp_sync_name', sync.clientName); } catch(e) {}
+}
+
+function syncDisconnect() {
+  sync._reconnecting = false;
+  if (sync._reconnTimer) clearTimeout(sync._reconnTimer);
+  if (sync.ws) { try { sync.ws.close(); } catch(e) {} sync.ws = null; }
+  syncSetStatus('disconnected');
+  sync.presence = [];
+  renderSyncPanel();
+}
+
+// Push our current workspace to the server/room
+function syncPushWorkspace() {
+  if (!sync.ws || sync.ws.readyState !== 1 || sync.readonly) return;
+  var ws = getActiveWorkspace();
+  try {
+    sync.ws.send(JSON.stringify({ type: 'workspace_update', workspace: ws }));
+  } catch(e) {}
+}
+
+// Apply incoming workspace from server (replaces current workspace)
+function _applySyncWorkspace(wsData) {
+  if (!wsData) return;
+  // Save as a new workspace (or replace active)
+  var aid = getActiveWorkspaceId();
+  if (aid) {
+    var existing = loadWorkspace(aid);
+    if (existing) {
+      // Merge: keep analysis data from runtime; replace team fields from server
+      existing.repos = wsData.repos || existing.repos;
+      existing.name  = wsData.name  || existing.name;
+      saveWorkspace(existing);
+      // Reload repos list
+      repos = [];
+      existing.repos.forEach(function(entry){ addRepoByName(entry.name, entry); });
+      render();
+      return;
+    }
+  }
+  // No active workspace — import it
+  var id = 'ws_' + Date.now();
+  var newWs = { id: id, name: wsData.name || 'Synced', createdAt: Date.now(), repos: (wsData.repos||[]).map(function(r){ return _makeRepoEntry(r.name, r); }) };
+  var idx = loadWorkspaceIndex();
+  idx.push({ id: id, name: newWs.name, createdAt: newWs.createdAt });
+  saveWorkspaceIndex(idx);
+  saveWorkspace(newWs);
+  setActiveWorkspaceId(id);
+  repos = [];
+  newWs.repos.forEach(function(entry){ addRepoByName(entry.name, entry); });
+  render();
+}
+
+// Call this after every saveState() to push changes to the room
+var _origSaveState = saveState;
+saveState = function() {
+  _origSaveState();
+  syncPushWorkspace();
+};
+
+// ── Sync panel UI ─────────────────────────────────────────────────────────────
+// ── More menu ─────────────────────────────────────────────────────────────────
+function toggleMoreMenu() {
+  var menu = document.getElementById('more-menu');
+  if (!menu) return;
+  var open = menu.style.display !== 'none';
+  menu.style.display = open ? 'none' : 'block';
+  if (!open) {
+    setTimeout(function() {
+      document.addEventListener('click', _closeMoreOnOutside);
+    }, 0);
+  }
+}
+function closeMoreMenu() {
+  var menu = document.getElementById('more-menu');
+  if (menu) menu.style.display = 'none';
+  document.removeEventListener('click', _closeMoreOnOutside);
+}
+function _closeMoreOnOutside(e) {
+  var wrap = document.getElementById('more-wrap');
+  if (wrap && !wrap.contains(e.target)) closeMoreMenu();
+}
+
+function toggleSyncPanel() {
+  sync._panelOpen = !sync._panelOpen;
+  var panel = document.getElementById('sync-panel');
+  if (panel) {
+    panel.style.display = sync._panelOpen ? '' : 'none';
+    if (sync._panelOpen) renderSyncPanel();
+  }
+}
+
+function renderSyncPanel() {
+  var panel = document.getElementById('sync-panel');
+  if (!panel || !sync._panelOpen) return;
+  var isConn = sync.status === 'connected';
+  var isConnecting = sync.status === 'connecting';
+  var room = sync.room || (function(){ try { return localStorage.getItem('grasp_sync_room') || 'default'; } catch(e){ return 'default'; } })();
+  var name = sync.clientName || (function(){ try { return localStorage.getItem('grasp_sync_name') || ''; } catch(e){ return ''; } })();
+
+  var html = '<div class="sync-panel-title">🔄 Live Collaboration</div>';
+
+  if (!isConn && !isConnecting) {
+    html += '<div class="sync-row"><span class="sync-label">Room</span><input class="sync-input" id="sp-room" value="' + esc(room) + '" placeholder="default"></div>';
+    html += '<div class="sync-row"><span class="sync-label">Name</span><input class="sync-input" id="sp-name" value="' + esc(name) + '" placeholder="Your name"></div>';
+    html += '<div class="sync-row"><span class="sync-label">Password</span><input class="sync-input" id="sp-pass" type="password" placeholder="optional"></div>';
+    html += '<button class="sync-connect-btn" onclick="_syncConnectFromPanel()">Connect</button>';
+    html += '<div style="font-size:9px;color:var(--t3);margin-top:8px;line-height:1.5;">Connect to a Grasp server running on your LAN (e.g. <code>npx grasp --host=0.0.0.0</code>) for live team sync.</div>';
+  } else if (isConnecting) {
+    html += '<div style="font-size:10px;color:var(--t2);margin-bottom:8px;">Connecting to room <b>' + esc(sync.room) + '</b>…</div>';
+    html += '<button class="sync-disconnect-btn" onclick="syncDisconnect()">Cancel</button>';
+  } else {
+    html += '<div style="font-size:10px;color:#22c55e;margin-bottom:8px;">✓ Room: <b>' + esc(sync.room) + '</b></div>';
+    if (sync.readonly) html += '<div style="font-size:9px;color:#f59e0b;margin-bottom:6px;">👁 Read-only</div>';
+    // Presence list
+    if (sync.presence.length) {
+      html += '<div class="sync-presence"><div class="sync-presence-title">Online (' + sync.presence.length + ')</div>';
+      sync.presence.forEach(function(p) {
+        var isSelf = p.id === sync.clientId;
+        html += '<div class="sync-peer' + (p.readonly ? ' ro' : '') + '"><span class="sync-peer-dot"></span><span style="color:' + (isSelf ? 'var(--acc)' : 'var(--t2)') + '">' + esc(p.name) + (isSelf ? ' (you)' : '') + '</span>' + (p.readonly ? ' <span style="font-size:9px;color:var(--t3)">[ro]</span>' : '') + '</div>';
+      });
+      html += '</div>';
+    }
+    // Share links
+    html += '<div class="sync-share-row">';
+    html += '<button class="sync-share-btn" onclick="_copyRWLink()"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-2px;margin-right:5px"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>Copy team link</button>';
+    html += '<button class="sync-share-btn" style="margin-top:5px;" onclick="_copyROLink()"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-2px;margin-right:5px"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>Copy read-only link</button>';
+    html += '</div>';
+    html += '<button class="sync-disconnect-btn" onclick="syncDisconnect()">Disconnect</button>';
+  }
+
+  panel.textContent = '';
+  panel.insertAdjacentHTML('beforeend', html);
+}
+
+function _syncConnectFromPanel() {
+  var room = (document.getElementById('sp-room') || {}).value || 'default';
+  var name = (document.getElementById('sp-name') || {}).value || 'Me';
+  var pass = (document.getElementById('sp-pass') || {}).value || '';
+  syncConnect(room.trim(), name.trim(), pass);
+}
+
+function _copyRWLink() {
+  var url = location.origin + location.pathname + '?sync_room=' + encodeURIComponent(sync.room);
+  _copyToClipboard(url, '⎘ Team link copied!');
+}
+
+function _copyROLink() {
+  var url = location.origin + location.pathname + '?sync_room=' + encodeURIComponent(sync.room) + '&readonly=1';
+  _copyToClipboard(url, '👁 Read-only link copied!');
+}
+
+function _copyToClipboard(text, successMsg) {
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(function(){ showToast(successMsg); }).catch(function(){ prompt('Copy:', text); });
+  } else {
+    prompt('Copy:', text);
+  }
+}
+
+// ── Auto-connect from URL params ──────────────────────────────────────────────
+function initSyncFromURL() {
+  var params = new URLSearchParams(location.search);
+  var room   = params.get('sync_room');
+  var ro     = params.get('readonly') === '1';
+
+  if (room) {
+    sync.readonly = ro;
+    sync.clientName = (function(){ try { return localStorage.getItem('grasp_sync_name') || 'Me'; } catch(e) { return 'Me'; } })();
+    if (ro) {
+      var banner = document.getElementById('readonly-banner');
+      if (banner) banner.classList.add('visible');
+    }
+    // Try to connect — if no server, it just fails gracefully
+    syncConnect(room, sync.clientName);
+  }
+}
+
+// Close sync panel on outside click
+document.addEventListener('click', function(e) {
+  var wrap = document.getElementById('sync-wrap');
+  if (wrap && !wrap.contains(e.target)) {
+    sync._panelOpen = false;
+    var panel = document.getElementById('sync-panel');
+    if (panel) panel.style.display = 'none';
+  }
+});
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+initAuth();
+loadState();
+render();
+</script>
+
+<!-- Help FAB -->
+<button class="kbd-fab" id="kbd-fab" title="Keyboard shortcuts" aria-label="Keyboard shortcuts">?</button>
+<div class="kbd-popover" id="kbd-popover" style="display:none;">
+  <div class="kbd-popover-title">Keyboard</div>
+  <div class="kbd-row"><span class="kbd-key">T</span><span class="kbd-desc">Cycle theme</span></div>
+  <div class="kbd-row"><span class="kbd-key">?</span><span class="kbd-desc">Toggle shortcuts popover</span></div>
+  <div class="kbd-row"><span class="kbd-key">Esc</span><span class="kbd-desc">Close overlay / popover</span></div>
+  <div class="kbd-row"><span class="kbd-key">Enter</span><span class="kbd-desc">Add repo (when focused)</span></div>
+  <div class="kbd-row"><span class="kbd-key">/</span><span class="kbd-desc">Focus add-repo input</span></div>
+</div>
+<button class="help-fab" id="help-fab">Help?</button>
+
+<!-- Help modal -->
+<!-- Help modal -->
+<div class="modal-overlay" id="help-overlay" style="display:none;" onclick="if(event.target===this)closeHelp()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <div class="modal-title">🦊 OrbitGrasp Team Dashboard — Guide</div>
+      <button class="modal-close" onclick="closeHelp()">×</button>
+    </div>
+    <div class="modal-body">
+
+      <div class="help-section">
+        <div class="help-section-title">🧩 Submission Core Features</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <div style="background:var(--bg0);border:1px solid var(--border);border-radius:7px;padding:10px 12px"><div style="font-size:11px;font-weight:600;color:var(--t0);margin-bottom:3px">🌐 Browser App</div><div style="font-size:10px;color:var(--t3);line-height:1.6">index.html — zero install, full dep graph, AI chat, 19 themes, cross-repo search.</div></div>
+          <div style="background:var(--bg0);border:1px solid var(--border);border-radius:7px;padding:10px 12px"><div style="font-size:11px;font-weight:600;color:var(--t0);margin-bottom:3px">📊 Team Dashboard</div><div style="font-size:10px;color:var(--t3);line-height:1.6">This page. Multi-repo health scores, CI status, commit sparklines, workspaces, and CSV export.</div></div>
+          <div style="background:var(--bg0);border:1px solid var(--border);border-radius:7px;padding:10px 12px"><div style="font-size:11px;font-weight:600;color:var(--t0);margin-bottom:3px">🦊 GitLab Orbit</div><div style="font-size:10px;color:var(--t3);line-height:1.6">Zero-setup GitLab integration. Parses merge requests, pipeline statuses, JUnit failure reports, and SAST security alerts.</div></div>
+          <div style="background:var(--bg0);border:1px solid var(--border);border-radius:7px;padding:10px 12px"><div style="font-size:11px;font-weight:600;color:var(--t0);margin-bottom:3px">💬 GitLab Duo Exporter</div><div style="font-size:10px;color:var(--t3);line-height:1.6">Generate optimized prompt context summaries for GitLab Duo chat in one click.</div></div>
+        </div>
+      </div>
+
+      <div class="help-section">
+        <div class="help-section-title">🚀 Getting Started</div>
+        <div class="help-kv"><span class="help-key">Add a repo</span><span class="help-val">Paste owner/repo or a GitLab repository URL, press Enter or click + Add Repo.</span></div>
+        <div class="help-kv"><span class="help-key">Workspaces</span><span class="help-val">Organize different project groups into workspaces, saved automatically in localStorage.</span></div>
+        <div class="help-kv"><span class="help-key">Open in visualizer</span><span class="help-val">Click any repository name to deep-dive into its interactive dependency graph.</span></div>
+        <div class="help-kv"><span class="help-key">Re-analyze</span><span class="help-val">Trigger a fresh client-side GitLab API analysis to update scores, issues, and CI/CD job statuses.</span></div>
+      </div>
+
+      <div class="help-section">
+        <div class="help-section-title">🔒 Privacy &amp; Security</div>
+        <div class="help-kv"><span class="help-key">100% Client-Side</span><span class="help-val">All computations and API calls happen directly in your browser. No background telemetry.</span></div>
+        <div class="help-kv"><span class="help-key">Direct Queries</span><span class="help-val">Requests are sent directly to gitlab.com or your self-hosted GitLab instance.</span></div>
+        <div class="help-kv"><span class="help-key">Token Storage</span><span class="help-val">Tokens are stored strictly in your browser's localStorage and never transmitted elsewhere.</span></div>
+      </div>
+
+    </div>
+    <div class="modal-footer">
+      <button class="modal-ok" onclick="closeHelp()">Got it!</button>
+    </div>
+  </div>
+</div>
+
+<!-- Update toast -->
+<div id="update-toast" style="display:none;position:fixed;bottom:50px;right:16px;z-index:9999;width:290px;background:var(--bg1);border:1px solid var(--acc);border-radius:10px;padding:14px 16px;box-shadow:0 8px 32px rgba(0,0,0,0.6);font-size:11px;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+    <span style="color:var(--acc);font-weight:700;font-family:var(--font)">⬆ OrbitGrasp Update Available</span>
+    <button onclick="dismissUpdate()" style="background:none;border:none;color:var(--t3);cursor:pointer;font-size:15px;line-height:1;padding:0;opacity:0.7" title="Dismiss">✕</button>
+  </div>
+  <div style="color:var(--t2);margin-bottom:12px;font-family:var(--font)">
+    Current: v<span id="toast-cur-ver"></span>&nbsp;&nbsp;→&nbsp;&nbsp;<span style="color:#22c55e;font-weight:700">v<span id="toast-new-ver"></span></span>
+  </div>
+  <div style="display:flex;gap:8px;margin-bottom:8px">
+    <button id="update-apply-btn" onclick="applyGraspUpdate()" style="flex:1;background:var(--acc);color:var(--bg);border:none;padding:8px;border-radius:6px;cursor:pointer;font-weight:700;font-size:11px;font-family:var(--font)">⬆ Update Now</button>
+    <button onclick="dismissUpdate()" style="background:none;border:1px solid var(--border);color:var(--t3);padding:8px 12px;border-radius:6px;cursor:pointer;font-size:11px;font-family:var(--font)">Later</button>
+  </div>
+  <div id="update-msg" style="font-size:10px;color:var(--t3);text-align:center;min-height:14px;font-family:var(--font)"></div>
+</div>
+
+<div class="status-bar">
+  <span>OrbitGrasp</span>&nbsp;<span id="footer-ver" style="opacity:0.45;font-size:9px"></span>&nbsp;·&nbsp;<span>2026</span>
+</div>
+
+<script>
+// ── Version & Update ──────────────────────────────────────────────────────────
+var GRASP_VERSION = '1.0.0 (Hackathon Release)';
+var GRASP_REPO    = 'avanishkasar/OrbitGrasp';
+var GRASP_FILE    = 'team-dashboard.html';
+var GRASP_NPM_PKG = 'grasp-mcp-server';
+
+document.getElementById('footer-ver').textContent = 'v' + GRASP_VERSION;
+
+function _parseVer(v){return(v||'0.0.0').split('.').map(Number);}
+function _isNewer(a,b){var av=_parseVer(a),bv=_parseVer(b);for(var i=0;i<3;i++){if((av[i]||0)>(bv[i]||0))return true;if((av[i]||0)<(bv[i]||0))return false;}return false;}
+
+async function checkForUpdates(){return;
+    var raw=localStorage.getItem('grasp_update_dismissed');
+    if(raw){var d=JSON.parse(raw);if(d.ts&&Date.now()-d.ts<86400000)return;}
+    await new Promise(function(r){setTimeout(r,3000);});
+    var res=await fetch('https://registry.npmjs.org/'+GRASP_NPM_PKG+'/latest',{cache:'no-store'});
+    if(!res.ok)return;
+    var data=await res.json();
+    var latest=data.version;
+    if(_isNewer(latest,GRASP_VERSION)){
+      document.getElementById('toast-cur-ver').textContent=GRASP_VERSION;
+      document.getElementById('toast-new-ver').textContent=latest;
+      document.getElementById('update-toast').setAttribute('data-latest',latest);
+      document.getElementById('update-toast').style.display='block';
+    }
+  }catch(e){}
+}
+
+function dismissUpdate(){
+  var toast=document.getElementById('update-toast');
+  var latest=toast.getAttribute('data-latest')||'';
+  toast.style.display='none';
+  try{localStorage.setItem('grasp_update_dismissed',JSON.stringify({ver:latest,ts:Date.now()}));}catch(e){}
+}
+
+async function applyGraspUpdate(){
+  var btn=document.getElementById('update-apply-btn');
+  var msg=document.getElementById('update-msg');
+  btn.textContent='Fetching…';btn.disabled=true;
+  msg.textContent='Downloading latest version…';
+  try{
+    var url='https://raw.githubusercontent.com/'+GRASP_REPO+'/main/'+GRASP_FILE;
+    var res=await fetch(url);
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    var html=await res.text();
+    var blob=new Blob([html],{type:'text/html'});
+    var a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);a.download=GRASP_FILE;
+    document.body.appendChild(a);a.click();document.body.removeChild(a);
+    msg.textContent='Downloaded ✓  Applying in 1s…';
+    setTimeout(function(){window.location.href=URL.createObjectURL(new Blob([html],{type:'text/html'}));},1000);
+  }catch(e){
+    btn.textContent='⬆ Update Now';btn.disabled=false;
+    msg.innerHTML='Could not auto-fetch. <a href="https://github.com/'+GRASP_REPO+'/releases" target="_blank" style="color:var(--acc)">View on GitHub →</a>';
+  }
+}
+
+// ── Theme system ──────────────────────────────────────────────────────────────
+var THEME_ORDER=['dark','light','matrix','amber','dracula','nord','tokyo','catppuccin','gruvbox','obsidian','midnight','carbon','noir','synthwave','ocean','forest','sunset','hc','solarized'];
+var THEME_META={
+  dark:{label:'Dark',acc:'#ffffff'},light:{label:'Light',acc:'#00a884'},
+  matrix:{label:'Matrix',acc:'#00ff41'},amber:{label:'Amber Terminal',acc:'#ffb000'},dracula:{label:'Dracula',acc:'#ff79c6'},
+  nord:{label:'Nord',acc:'#88c0d0'},tokyo:{label:'Tokyo Night',acc:'#7aa2f7'},catppuccin:{label:'Catppuccin',acc:'#cba6f7'},gruvbox:{label:'Gruvbox',acc:'#d79921'},
+  obsidian:{label:'Obsidian Gold',acc:'#c9a84c'},midnight:{label:'Midnight Diamond',acc:'#4d9fff'},carbon:{label:'Carbon',acc:'#0f62fe'},noir:{label:'Noir',acc:'#ffffff'},
+  synthwave:{label:'Synthwave',acc:'#ff2d87'},ocean:{label:'Ocean Depth',acc:'#00dcc8'},forest:{label:'Forest',acc:'#7cba50'},sunset:{label:'Sunset',acc:'#ff7755'},
+  hc:{label:'High Contrast',acc:'#ffff00'},solarized:{label:'Solarized Light',acc:'#268bd2'}
+};
+var THEME_GROUPS=[['Terminal',['matrix','amber','dracula']],['Aesthetic',['nord','tokyo','catppuccin','gruvbox']],['Premium',['obsidian','midnight','carbon','noir']],['Creative',['synthwave','ocean','forest','sunset']],['Accessible',['hc','solarized']],['Classic',['dark','light']]];
+
+var currentTheme=(function(){try{var t=localStorage.getItem('grasp_theme');if(t&&THEME_ORDER.indexOf(t)!==-1)return t;}catch(e){}return'dark';})();
+
+function applyTheme(t){
+  currentTheme=t;
+  try{localStorage.setItem('grasp_theme',t);}catch(e){}
+  if(t==='dark'){document.documentElement.removeAttribute('data-theme');}
+  else{document.documentElement.setAttribute('data-theme',t);}
+  renderPicker();
+}
+
+function buildPicker(){
+  var p=document.getElementById('theme-picker');
+  p.innerHTML='';
+  THEME_GROUPS.forEach(function(g){
+    var cat=document.createElement('div');cat.className='theme-pick-cat';cat.textContent=g[0];p.appendChild(cat);
+    g[1].forEach(function(t){
+      var btn=document.createElement('button');
+      btn.className='theme-pick-item'+(currentTheme===t?' active':'');
+      btn.innerHTML='<span class="theme-pick-swatch" style="background:'+THEME_META[t].acc+'"></span>'+THEME_META[t].label;
+      btn.onclick=function(){applyTheme(t);hidePicker();};
+      p.appendChild(btn);
+    });
+  });
+}
+function renderPicker(){buildPicker();}
+
+var _tpTimer=null;
+var wrap=document.getElementById('theme-wrap');
+var picker=document.getElementById('theme-picker');
+var themeBtn=document.getElementById('theme-btn');
+
+themeBtn.onclick=function(){
+  var idx=THEME_ORDER.indexOf(currentTheme);
+  applyTheme(THEME_ORDER[(idx+1)%THEME_ORDER.length]);
+};
+wrap.onmouseenter=function(){if(_tpTimer)clearTimeout(_tpTimer);buildPicker();picker.style.display='';};
+wrap.onmouseleave=function(){_tpTimer=setTimeout(hidePicker,300);};
+picker.onmouseenter=function(){if(_tpTimer)clearTimeout(_tpTimer);};
+picker.onmouseleave=function(){_tpTimer=setTimeout(hidePicker,300);};
+function hidePicker(){picker.style.display='none';}
+
+// apply saved theme on load
+applyTheme(currentTheme);
+
+// ── Workspace dropdown wiring ─────────────────────────────────────────────────
+(function(){
+  var wsWrap=document.getElementById('ws-wrap');
+  var wsBtn=document.getElementById('ws-btn');
+  var wsDd=document.getElementById('ws-dropdown');
+  var _wsTmr=null;
+  wsBtn.onclick=function(e){e.stopPropagation();if(wsDd.style.display==='none')showWorkspaceDropdown();else hideWorkspaceDropdown();};
+  document.addEventListener('click',function(e){if(!wsWrap.contains(e.target))hideWorkspaceDropdown();});
+  renderWorkspaceLabel();
+})();
+
+// ── Kbd-fab ───────────────────────────────────────────────────────────────────
+(function(){
+  var fab = document.getElementById('kbd-fab');
+  var pop = document.getElementById('kbd-popover');
+  if (!fab || !pop) return;
+  var _t;
+  function show(){ clearTimeout(_t); pop.style.display = 'block'; }
+  function hide(delay){ clearTimeout(_t); _t = setTimeout(function(){ pop.style.display = 'none'; }, delay || 0); }
+  fab.addEventListener('mouseenter', show);
+  fab.addEventListener('mouseleave', function(){ hide(150); });
+  pop.addEventListener('mouseenter', function(){ clearTimeout(_t); });
+  pop.addEventListener('mouseleave', function(){ hide(100); });
+  fab.addEventListener('click', function(){
+    var open = pop.style.display !== 'none';
+    if (open) hide(); else show();
+  });
+})();
+
+// ── Help modal ────────────────────────────────────────────────────────────────
+document.getElementById('help-fab').onclick=function(){document.getElementById('help-overlay').style.display='flex';};
+function closeHelp(){document.getElementById('help-overlay').style.display='none';}
+document.addEventListener('keydown',function(e){
+  var tag = (e.target.tagName||'').toLowerCase();
+  var editing = tag === 'input' || tag === 'textarea' || tag === 'select';
+  if(e.key==='Escape'){
+    closeHelp();
+    hideWorkspaceDropdown();
+    var pop = document.getElementById('kbd-popover');
+    if (pop) pop.style.display = 'none';
+  }
+  if(!editing && e.key==='/'){
+    e.preventDefault();
+    var inp = document.getElementById('repo-input');
+    if (inp) inp.focus();
+  }
+  if(!editing && e.key==='?'){
+    var pop = document.getElementById('kbd-popover');
+    if (pop) pop.style.display = pop.style.display !== 'none' ? 'none' : 'block';
+  }
+});
+
+// ── Auto-connect sync if URL has room param ───────────────────────────────────
+initSyncFromURL();
+
+// ── Registry ──────────────────────────────────────────────────────────────────
+async function fetchRegistry() {
+  var panel = document.getElementById('registry-content');
+  try {
+    var resp = await fetch('http://localhost:7332/api/v1/registry', {signal: AbortSignal.timeout(2000)});
+    if (!resp.ok) throw new Error('server not available');
+    var data = await resp.json();
+    renderRegistry(data.repos || []);
+  } catch(e) {
+    panel.innerHTML = '<div style="color:var(--t3);font-size:11px;padding:8px">Grasp MCP server not running. Start with: <code>npx grasp-mcp-server</code></div>';
+  }
+}
+
+function renderRegistry(repos) {
+  var panel = document.getElementById('registry-content');
+  if (!repos.length) {
+    panel.innerHTML = '<div style="color:var(--t3);padding:8px;font-size:11px">No repos indexed yet. Analyze a repo first: <code>grasp analyze &lt;path&gt;</code></div>';
+    return;
+  }
+  panel.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:11px">' +
+    '<thead><tr style="border-bottom:1px solid var(--border)">' +
+    '<th style="text-align:left;padding:6px 8px;color:var(--t2);font-weight:600">Source</th>' +
+    '<th style="text-align:center;padding:6px 8px;color:var(--t2);font-weight:600">Grade</th>' +
+    '<th style="text-align:right;padding:6px 8px;color:var(--t2);font-weight:600">Files</th>' +
+    '<th style="text-align:right;padding:6px 8px;color:var(--t2);font-weight:600">Functions</th>' +
+    '<th style="text-align:right;padding:6px 8px;color:var(--t2);font-weight:600">Issues</th>' +
+    '<th style="text-align:left;padding:6px 8px;color:var(--t2);font-weight:600">Indexed</th>' +
+    '</tr></thead><tbody>' +
+    repos.map(function(r) {
+      var gradeColor = r.health_grade==='A'?'#ffffff':r.health_grade==='B'?'#4d9fff':r.health_grade==='C'?'#f6ad55':'#fc8181';
+      return '<tr style="border-bottom:1px solid rgba(255,255,255,0.04)">' +
+        '<td style="padding:6px 8px;font-family:monospace;color:var(--t0)">' + (r.source || '—') + '</td>' +
+        '<td style="text-align:center;padding:6px 8px"><span style="font-weight:800;color:' + gradeColor + '">' + (r.health_grade||'?') + '</span></td>' +
+        '<td style="text-align:right;padding:6px 8px;color:var(--t2)">' + (r.file_count||0) + '</td>' +
+        '<td style="text-align:right;padding:6px 8px;color:var(--t2)">' + (r.function_count||0) + '</td>' +
+        '<td style="text-align:right;padding:6px 8px;color:' + ((r.issue_count||0)>0?'#fc8181':'var(--t2)') + '">' + (r.issue_count||0) + '</td>' +
+        '<td style="padding:6px 8px;color:var(--t3)">' + (r.indexed_at ? new Date(r.indexed_at * 1000).toLocaleDateString() : '—') + '</td>' +
+        '</tr>';
+    }).join('') + '</tbody></table>';
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  fetchRegistry();
+  var btn = document.getElementById('refresh-registry-btn');
+  if (btn) btn.addEventListener('click', fetchRegistry);
+});
+</script>
+
+</body>
+</html>

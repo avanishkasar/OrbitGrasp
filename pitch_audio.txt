@@ -1,0 +1,23 @@
+So hello judges, this is team DDoxers and this is our project. What we have built over here is OrbitGrasp, a browser based code architecture visualizer built for the GitLab Transcend Hackathon.
+
+Every large codebase is a maze. When a new developer joins a team, or when you are trying to refactor something critical, you are flying blind. You do not know which files depend on what, where the risks are, or what will break if you change something.
+
+This is what OrbitGrasp does. It gives you a complete visual map of any codebase in seconds, running entirely in your browser with zero setup and zero installation.
+
+Now let us walk you through some of our cool features before we dive in.
+
+Let us start with the main app. It is a clean black and white minimalist design. All you do is type in any GitHub repository URL and click Analyze. OrbitGrasp fetches the structure and builds a full knowledge graph of every file and its relationships right here in the browser.
+
+Look at that. This is a live interactive dependency graph of the entire codebase, animated and ready to explore.
+
+Now here is where it gets interesting. OrbitGrasp does not just give you one view, it gives you ten. Switch to Treemap and you immediately see which files are the largest and most complex. Switch to the Dependency Matrix and you see every coupling relationship between modules at a glance. And switch to 3D and now you are exploring the architecture in three dimensional space. Each view reveals something completely different about the same codebase.
+
+OrbitGrasp also automatically calculates architecture health scores. You get coupling scores, complexity ratings, and risk flags, all without writing a single line of config. If a file has too many dependencies, OrbitGrasp flags it. If there are circular dependencies, OrbitGrasp finds them.
+
+Now let us talk about the AI chat. We can open the chat panel and ask questions about the codebase in plain English. Watch, we will ask: which files have the most dependencies? The AI reads the graph data we have already built and answers instantly. You can connect OpenAI, Anthropic, Google Gemini, or even a local Ollama model running on your own machine.
+
+For teams managing multiple repositories, OrbitGrasp has a dedicated Team Dashboard. Add all your repositories here and get a unified view of architecture health, commit activity, and risk scores across your entire organization, all in one page.
+
+And the most important thing is that OrbitGrasp is completely privacy first. Your tokens are stored only in your browser. No accounts. No tracking. No data leaving your machine. It is built with React, D3.js, WebAssembly powered Tree-sitter for real AST parsing, and supports seventeen built-in themes.
+
+So this was our project for the GitLab Transcend Hackathon 2026, and we hope that the judges liked it. Thank you.
